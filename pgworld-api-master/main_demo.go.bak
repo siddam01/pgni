@@ -1,0 +1,288 @@
+package main
+
+import (
+	"encoding/json"
+	"fmt"
+	"log"
+	"net/http"
+	"strconv"
+
+	"github.com/gorilla/mux"
+)
+
+// Demo data structures
+type Room struct {
+	ID        int    `json:"id"`
+	RoomNo    string `json:"room_no"`
+	Status    string `json:"status"`
+	Rent      int    `json:"rent"`
+	Amenities string `json:"amenities"`
+	Tenant    string `json:"tenant,omitempty"`
+}
+
+type Tenant struct {
+	ID       int    `json:"id"`
+	Name     string `json:"name"`
+	RoomNo   string `json:"room_no"`
+	Phone    string `json:"phone"`
+	Email    string `json:"email"`
+	MoveDate string `json:"move_date"`
+}
+
+type Bill struct {
+	ID      int    `json:"id"`
+	Type    string `json:"type"`
+	Amount  int    `json:"amount"`
+	DueDate string `json:"due_date"`
+	Status  string `json:"status"`
+}
+
+type Dashboard struct {
+	TotalRooms   int `json:"total_rooms"`
+	Occupied     int `json:"occupied"`
+	Available    int `json:"available"`
+	Revenue      int `json:"revenue"`
+}
+
+// Demo data
+var rooms = []Room{
+	{1, "101", "occupied", 8000, "AC, WiFi, TV", "John Doe"},
+	{2, "102", "occupied", 8000, "AC, WiFi", "Jane Smith"},
+	{3, "103", "available", 7500, "WiFi, TV", ""},
+	{4, "104", "occupied", 8500, "AC, WiFi, TV, Geyser", "Mike Johnson"},
+	{5, "105", "available", 7000, "WiFi", ""},
+}
+
+var tenants = []Tenant{
+	{1, "John Doe", "101", "+91 98765 43210", "john@email.com", "15 Jan 2024"},
+	{2, "Jane Smith", "102", "+91 98765 43211", "jane@email.com", "10 Feb 2024"},
+	{3, "Mike Johnson", "104", "+91 98765 43212", "mike@email.com", "05 Mar 2024"},
+}
+
+var bills = []Bill{
+	{1, "Electricity", 2500, "15 Mar 2024", "paid"},
+	{2, "Water", 800, "18 Mar 2024", "pending"},
+	{3, "Rent", 8000, "20 Mar 2024", "paid"},
+	{4, "Maintenance", 1200, "25 Mar 2024", "pending"},
+}
+
+func enableCORS(w http.ResponseWriter) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+}
+
+func corsMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		enableCORS(w)
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+func getRooms(w http.ResponseWriter, r *http.Request) {
+	enableCORS(w)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"data": rooms,
+		"meta": map[string]interface{}{
+			"status":  "200",
+			"message": "Rooms fetched successfully",
+		},
+	})
+}
+
+func getTenants(w http.ResponseWriter, r *http.Request) {
+	enableCORS(w)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"data": tenants,
+		"meta": map[string]interface{}{
+			"status":  "200",
+			"message": "Tenants fetched successfully",
+		},
+	})
+}
+
+func getBills(w http.ResponseWriter, r *http.Request) {
+	enableCORS(w)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"data": bills,
+		"meta": map[string]interface{}{
+			"status":  "200",
+			"message": "Bills fetched successfully",
+		},
+	})
+}
+
+func getDashboard(w http.ResponseWriter, r *http.Request) {
+	enableCORS(w)
+	w.Header().Set("Content-Type", "application/json")
+	
+	occupied := 0
+	for _, room := range rooms {
+		if room.Status == "occupied" {
+			occupied++
+		}
+	}
+	
+	dashboard := Dashboard{
+		TotalRooms: len(rooms),
+		Occupied:   occupied,
+		Available:  len(rooms) - occupied,
+		Revenue:    125000,
+	}
+	
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"data": dashboard,
+		"meta": map[string]interface{}{
+			"status":  "200",
+			"message": "Dashboard data fetched successfully",
+		},
+	})
+}
+
+func getRoom(w http.ResponseWriter, r *http.Request) {
+	enableCORS(w)
+	w.Header().Set("Content-Type", "application/json")
+	
+	vars := mux.Vars(r)
+	id, err := strconv.Atoi(vars["id"])
+	if err != nil {
+		http.Error(w, "Invalid room ID", http.StatusBadRequest)
+		return
+	}
+	
+	for _, room := range rooms {
+		if room.ID == id {
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"data": room,
+				"meta": map[string]interface{}{
+					"status":  "200",
+					"message": "Room fetched successfully",
+				},
+			})
+			return
+		}
+	}
+	
+	http.Error(w, "Room not found", http.StatusNotFound)
+}
+
+func healthCheck(w http.ResponseWriter, r *http.Request) {
+	enableCORS(w)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"status":  "ok",
+		"message": "PG/Hostel Management API is running",
+		"version": "1.0.0",
+	})
+}
+
+func main() {
+	r := mux.NewRouter()
+	
+	// Use CORS middleware
+	r.Use(corsMiddleware)
+	
+	// API routes
+	api := r.PathPrefix("/api/v1").Subrouter()
+	
+	// Health check
+	api.HandleFunc("/health", healthCheck).Methods("GET", "OPTIONS")
+	
+	// Dashboard
+	api.HandleFunc("/dashboard", getDashboard).Methods("GET", "OPTIONS")
+	
+	// Rooms
+	api.HandleFunc("/rooms", getRooms).Methods("GET", "OPTIONS")
+	api.HandleFunc("/rooms/{id}", getRoom).Methods("GET", "OPTIONS")
+	
+	// Tenants
+	api.HandleFunc("/tenants", getTenants).Methods("GET", "OPTIONS")
+	
+	// Bills
+	api.HandleFunc("/bills", getBills).Methods("GET", "OPTIONS")
+	
+	// Serve static API documentation
+	r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		enableCORS(w)
+		w.Header().Set("Content-Type", "text/html")
+		fmt.Fprintf(w, `
+<!DOCTYPE html>
+<html>
+<head>
+    <title>PG/Hostel Management API</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; }
+        .endpoint { background: #f5f5f5; padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .method { color: #007bff; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>PG/Hostel Management API - Demo Version</h1>
+    <p>This is a demo version of the API running with mock data.</p>
+    
+    <h2>Available Endpoints:</h2>
+    
+    <div class="endpoint">
+        <span class="method">GET</span> /api/v1/health - Health check
+    </div>
+    
+    <div class="endpoint">
+        <span class="method">GET</span> /api/v1/dashboard - Dashboard statistics
+    </div>
+    
+    <div class="endpoint">
+        <span class="method">GET</span> /api/v1/rooms - Get all rooms
+    </div>
+    
+    <div class="endpoint">
+        <span class="method">GET</span> /api/v1/rooms/{id} - Get specific room
+    </div>
+    
+    <div class="endpoint">
+        <span class="method">GET</span> /api/v1/tenants - Get all tenants
+    </div>
+    
+    <div class="endpoint">
+        <span class="method">GET</span> /api/v1/bills - Get all bills
+    </div>
+    
+    <h2>Example Requests:</h2>
+    <ul>
+        <li><a href="/api/v1/health" target="_blank">/api/v1/health</a></li>
+        <li><a href="/api/v1/dashboard" target="_blank">/api/v1/dashboard</a></li>
+        <li><a href="/api/v1/rooms" target="_blank">/api/v1/rooms</a></li>
+        <li><a href="/api/v1/tenants" target="_blank">/api/v1/tenants</a></li>
+        <li><a href="/api/v1/bills" target="_blank">/api/v1/bills</a></li>
+    </ul>
+    
+    <h2>Features Demonstrated:</h2>
+    <ul>
+        <li>✅ Room Management (View rooms, check availability)</li>
+        <li>✅ Tenant Management (View tenant details)</li>
+        <li>✅ Bill Management (Track various bills)</li>
+        <li>✅ Dashboard Analytics (Occupancy rates, revenue)</li>
+        <li>✅ REST API with JSON responses</li>
+        <li>✅ CORS enabled for web integration</li>
+    </ul>
+    
+    <p><strong>Note:</strong> This is a demo version. The full version includes database integration, authentication, payment processing, file uploads, and more.</p>
+</body>
+</html>
+		`)
+	})
+	
+	port := "8082"
+	fmt.Printf("🚀 PG/Hostel Management API Server starting on port %s\n", port)
+	fmt.Printf("📊 API Documentation: http://localhost:%s\n", port)
+	fmt.Printf("🔗 Health Check: http://localhost:%s/api/v1/health\n", port)
+	fmt.Printf("📱 Flutter App: http://localhost:8081\n")
+	
+	log.Fatal(http.ListenAndServe(":"+port, r))
+}

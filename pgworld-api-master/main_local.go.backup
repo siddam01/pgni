@@ -1,0 +1,225 @@
+package main
+
+import (
+	"encoding/json"
+	"fmt"
+	"log"
+	"net/http"
+	"os"
+
+	"github.com/gorilla/mux"
+)
+
+// WithCORS struct for CORS handling
+type WithCORS struct {
+	r *mux.Router
+}
+
+// Simplified structs for local demo
+type DashboardResponse struct {
+	TotalRooms     int    `json:"total_rooms"`
+	OccupiedRooms  int    `json:"occupied_rooms"`
+	AvailableRooms int    `json:"available_rooms"`
+	TotalTenants   int    `json:"total_tenants"`
+	TotalRevenue   int    `json:"total_revenue"`
+	PendingBills   int    `json:"pending_bills"`
+	Status         string `json:"status"`
+}
+
+type Room struct {
+	ID       string `json:"id"`
+	RoomNo   string `json:"roomno"`
+	Type     string `json:"type"`
+	Capacity int    `json:"capacity"`
+	Rent     int    `json:"rent"`
+	Status   string `json:"status"`
+	TenantID string `json:"tenant_id,omitempty"`
+}
+
+type User struct {
+	ID      string `json:"id"`
+	Name    string `json:"name"`
+	Email   string `json:"email"`
+	Phone   string `json:"phone"`
+	RoomID  string `json:"room_id"`
+	Status  string `json:"status"`
+	CheckIn string `json:"check_in"`
+}
+
+type Bill struct {
+	ID       string  `json:"id"`
+	UserID   string  `json:"user_id"`
+	RoomID   string  `json:"room_id"`
+	Amount   float64 `json:"amount"`
+	Type     string  `json:"type"`
+	Status   string  `json:"status"`
+	DueDate  string  `json:"due_date"`
+	PaidDate string  `json:"paid_date,omitempty"`
+}
+
+// Demo data
+var rooms = []Room{
+	{"1", "101", "Single", 1, 8000, "occupied", "u1"},
+	{"2", "102", "Single", 1, 8000, "available", ""},
+	{"3", "103", "Double", 2, 12000, "occupied", "u2"},
+	{"4", "104", "Single", 1, 8000, "maintenance", ""},
+	{"5", "201", "Double", 2, 12000, "occupied", "u3"},
+	{"6", "202", "Single", 1, 8500, "available", ""},
+	{"7", "203", "Triple", 3, 15000, "occupied", "u4"},
+	{"8", "204", "Single", 1, 8500, "available", ""},
+}
+
+var users = []User{
+	{"u1", "Rajesh Kumar", "rajesh.kumar@email.com", "+91-9876543210", "1", "active", "2024-01-15"},
+	{"u2", "Priya Sharma", "priya.sharma@email.com", "+91-9876543211", "3", "active", "2024-02-01"},
+	{"u3", "Amit Patel", "amit.patel@email.com", "+91-9876543212", "5", "active", "2024-01-20"},
+	{"u4", "Neha Singh", "neha.singh@email.com", "+91-9876543213", "7", "active", "2024-03-01"},
+}
+
+var bills = []Bill{
+	{"b1", "u1", "1", 8000, "rent", "paid", "2024-10-01", "2024-10-01"},
+	{"b2", "u2", "3", 12000, "rent", "paid", "2024-10-01", "2024-10-02"},
+	{"b3", "u3", "5", 12000, "rent", "pending", "2024-10-01", ""},
+	{"b4", "u4", "7", 15000, "rent", "overdue", "2024-09-01", ""},
+	{"b5", "u1", "1", 500, "maintenance", "pending", "2024-10-15", ""},
+}
+
+// Health Check
+func HealthCheck(w http.ResponseWriter, r *http.Request) {
+	response := map[string]string{
+		"status":  "healthy",
+		"service": "PG World API",
+		"version": "1.0.0",
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}
+
+// Dashboard endpoint
+func Dashboard(w http.ResponseWriter, r *http.Request) {
+	occupiedCount := 0
+	pendingBills := 0
+	totalRevenue := 0
+
+	for _, room := range rooms {
+		if room.Status == "occupied" {
+			occupiedCount++
+		}
+	}
+
+	for _, bill := range bills {
+		if bill.Status == "pending" || bill.Status == "overdue" {
+			pendingBills++
+		}
+		if bill.Status == "paid" {
+			totalRevenue += int(bill.Amount)
+		}
+	}
+
+	dashboard := DashboardResponse{
+		TotalRooms:     len(rooms),
+		OccupiedRooms:  occupiedCount,
+		AvailableRooms: len(rooms) - occupiedCount,
+		TotalTenants:   len(users),
+		TotalRevenue:   totalRevenue,
+		PendingBills:   pendingBills,
+		Status:         "success",
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(dashboard)
+}
+
+// Room endpoints
+func RoomGet(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"status": "success",
+		"data":   rooms,
+	})
+}
+
+// User endpoints
+func UserGet(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"status": "success",
+		"data":   users,
+	})
+}
+
+// Bill endpoints
+func BillGet(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"status": "success",
+		"data":   bills,
+	})
+}
+
+// CORS handler
+func (s *WithCORS) ServeHTTP(res http.ResponseWriter, req *http.Request) {
+	res.Header().Set("Access-Control-Allow-Origin", "*")
+	res.Header().Set("Access-Control-Allow-Methods", "GET,OPTIONS,POST,PUT,DELETE")
+	res.Header().Set("Access-Control-Allow-Headers", "Content-Type,apikey,appversion")
+
+	if req.Method == "OPTIONS" {
+		return
+	}
+
+	s.r.ServeHTTP(res, req)
+}
+
+func main() {
+	router := mux.NewRouter()
+
+	// Health check
+	router.HandleFunc("/health", HealthCheck).Methods("GET")
+
+	// Dashboard - matching the original API structure
+	router.HandleFunc("/dashboard", Dashboard).Queries("hostel_id", "{hostel_id}").Methods("GET")
+	router.HandleFunc("/dashboard", Dashboard).Methods("GET") // Also allow without hostel_id for demo
+
+	// Room endpoints - matching the original API structure
+	router.HandleFunc("/room", RoomGet).Queries("hostel_id", "{hostel_id}").Methods("GET")
+	router.HandleFunc("/room", RoomGet).Methods("GET") // Also allow without hostel_id for demo
+
+	// User endpoints - matching the original API structure
+	router.HandleFunc("/user", UserGet).Queries("hostel_id", "{hostel_id}").Methods("GET")
+	router.HandleFunc("/user", UserGet).Methods("GET") // Also allow without hostel_id for demo
+
+	// Bill endpoints - matching the original API structure
+	router.HandleFunc("/bill", BillGet).Queries("hostel_id", "{hostel_id}").Methods("GET")
+	router.HandleFunc("/bill", BillGet).Methods("GET") // Also allow without hostel_id for demo
+
+	// Root endpoint
+	router.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		response := map[string]string{
+			"message": "PG World API Server",
+			"status":  "running",
+			"version": "1.0.0",
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(response)
+	}).Methods("GET")
+
+	// Check if running in Lambda environment
+	if os.Getenv("AWS_LAMBDA_RUNTIME_API") != "" {
+		// For Lambda deployment (not used in local development)
+		log.Fatal("Lambda environment not supported in this local version")
+	} else {
+		// Running locally
+		fmt.Println("=========================================")
+		fmt.Println("🏢 PG World API Server (Local Mode)")
+		fmt.Println("=========================================")
+		fmt.Println("🚀 Server: http://localhost:8080")
+		fmt.Println("❤️  Health: http://localhost:8080/health")
+		fmt.Println("📊 Dashboard: http://localhost:8080/dashboard")
+		fmt.Println("🏠 Rooms: http://localhost:8080/room")
+		fmt.Println("👥 Users: http://localhost:8080/user")
+		fmt.Println("💰 Bills: http://localhost:8080/bill")
+		fmt.Println("=========================================")
+		fmt.Println("")
+		log.Fatal(http.ListenAndServe(":8080", &WithCORS{router}))
+	}
+}

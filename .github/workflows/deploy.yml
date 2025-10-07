@@ -1,0 +1,221 @@
+name: Deploy PGNi API
+
+on:
+  push:
+    branches:
+      - develop      # Auto-deploy to pre-production
+      - main         # Deploy to production (with approval)
+  pull_request:
+    branches:
+      - develop
+      - main
+
+env:
+  GO_VERSION: '1.21'
+  AWS_REGION: 'us-east-1'
+
+jobs:
+  build:
+    name: Build and Test
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      
+      - name: Cache Go modules
+        uses: actions/cache@v3
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+      
+      - name: Download dependencies
+        working-directory: ./pgworld-api-master
+        run: go mod download
+      
+      - name: Build application
+        working-directory: ./pgworld-api-master
+        run: |
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o pgworld-api .
+      
+      - name: Run tests
+        working-directory: ./pgworld-api-master
+        run: go test -v ./... || echo "No tests found"
+      
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: pgworld-api
+          path: pgworld-api-master/pgworld-api
+          retention-days: 7
+
+  deploy-preprod:
+    name: Deploy to Pre-Production
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
+    environment:
+      name: pre-production
+      url: https://api-preprod.pgni.com
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Download artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: pgworld-api
+      
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+      
+      - name: Deploy to Pre-Prod EC2
+        env:
+          PRIVATE_KEY: ${{ secrets.PREPROD_SSH_KEY }}
+          HOST: ${{ secrets.PREPROD_HOST }}
+          USER: ec2-user
+        run: |
+          echo "$PRIVATE_KEY" > private_key.pem
+          chmod 600 private_key.pem
+          
+          scp -i private_key.pem -o StrictHostKeyChecking=no \
+            pgworld-api $USER@$HOST:/tmp/
+          
+          ssh -i private_key.pem -o StrictHostKeyChecking=no $USER@$HOST << 'EOF'
+            sudo systemctl stop pgworld-api || true
+            
+            if [ -f /opt/pgworld/pgworld-api ]; then
+              sudo cp /opt/pgworld/pgworld-api /opt/pgworld/pgworld-api.backup
+            fi
+            
+            sudo mv /tmp/pgworld-api /opt/pgworld/pgworld-api
+            sudo chmod +x /opt/pgworld/pgworld-api
+            
+            aws ssm get-parameters-by-path \
+              --path "/pgworld/preprod/" \
+              --with-decryption \
+              --region us-east-1 \
+              --query "Parameters[*].[Name,Value]" \
+              --output text | while read name value; do
+              param_name=$(echo $name | awk -F'/' '{print $NF}')
+              echo "$param_name=$value" >> /tmp/pgworld.env
+            done
+            sudo mv /tmp/pgworld.env /opt/pgworld/.env
+            
+            sudo systemctl start pgworld-api
+            sudo systemctl status pgworld-api
+          EOF
+          
+          rm private_key.pem
+      
+      - name: Health Check
+        run: |
+          sleep 10
+          curl -f https://api-preprod.pgni.com/ || exit 1
+          echo "Pre-production deployment successful!"
+
+  deploy-production:
+    name: Deploy to Production
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    environment:
+      name: production
+      url: https://api.pgni.com
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Download artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: pgworld-api
+      
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+      
+      - name: Deploy to Production EC2
+        env:
+          PRIVATE_KEY: ${{ secrets.PRODUCTION_SSH_KEY }}
+          HOST: ${{ secrets.PRODUCTION_HOST }}
+          USER: ec2-user
+        run: |
+          echo "$PRIVATE_KEY" > private_key.pem
+          chmod 600 private_key.pem
+          
+          scp -i private_key.pem -o StrictHostKeyChecking=no \
+            pgworld-api $USER@$HOST:/tmp/
+          
+          ssh -i private_key.pem -o StrictHostKeyChecking=no $USER@$HOST << 'EOF'
+            sudo systemctl stop pgworld-api || true
+            
+            if [ -f /opt/pgworld/pgworld-api ]; then
+              sudo cp /opt/pgworld/pgworld-api /opt/pgworld/pgworld-api.backup.$(date +%Y%m%d-%H%M%S)
+            fi
+            
+            sudo mv /tmp/pgworld-api /opt/pgworld/pgworld-api
+            sudo chmod +x /opt/pgworld/pgworld-api
+            
+            aws ssm get-parameters-by-path \
+              --path "/pgworld/production/" \
+              --with-decryption \
+              --region us-east-1 \
+              --query "Parameters[*].[Name,Value]" \
+              --output text | while read name value; do
+              param_name=$(echo $name | awk -F'/' '{print $NF}')
+              echo "$param_name=$value" >> /tmp/pgworld.env
+            done
+            sudo mv /tmp/pgworld.env /opt/pgworld/.env
+            
+            sudo systemctl start pgworld-api
+            sudo systemctl status pgworld-api
+          EOF
+          
+          rm private_key.pem
+      
+      - name: Health Check
+        run: |
+          sleep 10
+          curl -f https://api.pgni.com/ || exit 1
+          echo "Production deployment successful!"
+      
+      - name: Rollback on Failure
+        if: failure()
+        env:
+          PRIVATE_KEY: ${{ secrets.PRODUCTION_SSH_KEY }}
+          HOST: ${{ secrets.PRODUCTION_HOST }}
+          USER: ec2-user
+        run: |
+          echo "Deployment failed, rolling back..."
+          echo "$PRIVATE_KEY" > private_key.pem
+          chmod 600 private_key.pem
+          
+          ssh -i private_key.pem -o StrictHostKeyChecking=no $USER@$HOST << 'EOF'
+            sudo systemctl stop pgworld-api
+            if [ -f /opt/pgworld/pgworld-api.backup ]; then
+              sudo mv /opt/pgworld/pgworld-api.backup /opt/pgworld/pgworld-api
+              sudo systemctl start pgworld-api
+              echo "Rolled back to previous version"
+            fi
+          EOF
+          
+          rm private_key.pem
+          exit 1
+

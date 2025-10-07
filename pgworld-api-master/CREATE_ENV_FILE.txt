@@ -1,0 +1,14 @@
+# Copy this content to create a .env file
+# Save this as: .env (in the pgworld-api-master directory)
+
+dbConfig=root:root@tcp(localhost:3306)/pgworld_db
+connectionPool=10
+baseURL=http://localhost:8080
+supportEmailID=your_email@gmail.com
+supportEmailPassword=your_app_password
+supportEmailHost=smtp.gmail.com
+supportEmailPort=587
+s3Bucket=pgworld-uploads
+test=false
+migrate=false
+
