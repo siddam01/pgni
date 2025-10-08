@@ -1,0 +1,32 @@
+# Example Terraform Variables
+# Copy this file to terraform.tfvars and customize
+
+# Environment (preprod or production)
+environment = "preprod"
+
+# AWS Configuration
+aws_region     = "us-east-1"
+aws_account_id = "698302425856"
+
+# Project Configuration
+project_name = "pgni"
+
+# Database Configuration
+# db_password = "YourSecurePassword123!"  # Leave empty to auto-generate
+
+# KMS Encryption (Optional)
+enable_kms_encryption = false  # Set to true to use your KMS key
+# kms_key_id = "arn:aws:kms:us-east-1:698302425856:key/mrk-1b96d9eeccf649e695ed6ac2b13cb619"
+
+# Network Security
+# Restrict SSH access to your IP for better security
+allowed_ssh_cidrs = ["0.0.0.0/0"]  # Change to ["YOUR_IP/32"] for production
+
+# Common Tags
+common_tags = {
+  Project     = "PGNi"
+  ManagedBy   = "Terraform"
+  Owner       = "PGNi-Team"
+  Environment = "preprod"
+}
+
