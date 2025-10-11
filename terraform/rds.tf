@@ -133,39 +133,44 @@ resource "aws_iam_role_policy_attachment" "rds_monitoring" {
 }
 
 # Store database credentials in SSM Parameter Store
-resource "aws_ssm_parameter" "db_endpoint" {
-  name        = "/${var.project_name}/${var.environment}/db/endpoint"
-  description = "RDS database endpoint"
-  type        = "String"
-  value       = aws_db_instance.main.endpoint
-
-  tags = local.common_tags
-}
-
-resource "aws_ssm_parameter" "db_username" {
-  name        = "/${var.project_name}/${var.environment}/db/username"
-  description = "RDS database username"
-  type        = "String"
-  value       = aws_db_instance.main.username
-
-  tags = local.common_tags
-}
-
-resource "aws_ssm_parameter" "db_password" {
-  name        = "/${var.project_name}/${var.environment}/db/password"
-  description = "RDS database password"
-  type        = "SecureString"
-  value       = local.db_password
-
-  tags = local.common_tags
-}
-
-resource "aws_ssm_parameter" "db_name" {
-  name        = "/${var.project_name}/${var.environment}/db/name"
-  description = "RDS database name"
-  type        = "String"
-  value       = aws_db_instance.main.db_name
-
-  tags = local.common_tags
-}
+# DISABLED: Using existing-rds.tf for SSM parameters instead
+# resource "aws_ssm_parameter" "db_endpoint" {
+#   name        = "/${var.project_name}/${var.environment}/db/endpoint"
+#   description = "RDS database endpoint"
+#   type        = "String"
+#   value       = "${local.rds_endpoint}:${local.rds_port}"
+#   overwrite   = true
+# 
+#   tags = local.common_tags
+# }
+# 
+# resource "aws_ssm_parameter" "db_username" {
+#   name        = "/${var.project_name}/${var.environment}/db/username"
+#   description = "RDS database username"
+#   type        = "String"
+#   value       = local.rds_username
+#   overwrite   = true
+# 
+#   tags = local.common_tags
+# }
+# 
+# resource "aws_ssm_parameter" "db_password" {
+#   name        = "/${var.project_name}/${var.environment}/db/password"
+#   description = "RDS database password"
+#   type        = "SecureString"
+#   value       = local.rds_password
+#   overwrite   = true
+# 
+#   tags = local.common_tags
+# }
+# 
+# resource "aws_ssm_parameter" "db_name" {
+#   name        = "/${var.project_name}/${var.environment}/db/name"
+#   description = "RDS database name"
+#   type        = "String"
+#   value       = local.rds_db_name
+#   overwrite   = true
+# 
+#   tags = local.common_tags
+# }
 

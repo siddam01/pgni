@@ -166,7 +166,7 @@ output "next_steps" {
     === CONNECT TO EC2 ===
     
     SSH Command:
-       ${output.ssh_command.value}
+       ssh -i ${local.name_prefix}-key.pem ec2-user@${var.environment == "production" && length(aws_eip.api) > 0 ? aws_eip.api[0].public_ip : aws_instance.api.public_ip}
     
     === DEPLOY API ===
     
@@ -185,12 +185,12 @@ output "next_steps" {
     === TEST API ===
     
     Health Check:
-       curl ${output.api_health_url.value}
+       curl http://${var.environment == "production" && length(aws_eip.api) > 0 ? aws_eip.api[0].public_ip : aws_instance.api.public_ip}:8080/health
     
     === DATABASE ACCESS ===
     
     Connection String:
-       ${output.rds_connection_string.value}
+       mysql -h ${local.rds_endpoint} -u ${local.rds_username} -p ${local.rds_db_name}
     
     === RESOURCES CREATED ===
     
@@ -211,7 +211,7 @@ output "github_secrets" {
     AWS_REGION          = var.aws_region
     EC2_HOST            = var.environment == "production" && length(aws_eip.api) > 0 ? aws_eip.api[0].public_ip : aws_instance.api.public_ip
     SSH_PRIVATE_KEY     = "Run: terraform output -raw ssh_private_key"
-    DB_HOST             = split(":", aws_db_instance.main.endpoint)[0]
+    DB_HOST             = local.rds_endpoint
     DB_PASSWORD         = "Run: terraform output -raw rds_password"
     S3_BUCKET           = aws_s3_bucket.uploads.id
     SSM_PARAMETER_PATH  = "/${var.project_name}/${var.environment}/"

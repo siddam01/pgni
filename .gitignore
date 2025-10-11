@@ -1,0 +1,83 @@
+# Sensitive files - NEVER commit these!
+*.pem
+*.ppk
+preprod.env
+prod.env
+terraform.tfvars
+terraform.tfstate
+terraform.tfstate.backup
+.terraform/
+.terraform.lock.hcl
+*-key.pem
+ssh-key-*.txt
+*-key-*.txt
+credentials-*.txt
+*SECRET*
+*PASSWORD*
+CLOUDSHELL_COMMANDS.txt
+
+# Deployment artifacts
+*.zip
+*.tar.gz
+pgni-key*.pem
+ec2-key.pem
+api-code.zip
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Build artifacts
+pgworld-api-master/pgworld-api
+*/pgworld-api
+pgworld-api
+
+# Node modules
+node_modules/
+
+# Flutter/Dart
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+build/
+.pub-cache/
+.pub/
+ios/Pods/
+ios/.symlinks/
+android/.gradle/
+android/app/build/
+
+# Temporary deployment files
+DEPLOY_NOW_FINAL.txt
+COMPLETE_VALIDATION_AND_FIX.txt
+ENTERPRISE_COMPLETE_SOLUTION.txt
+QUICK_BUILD_FIX.txt
+FIX_EC2_AND_DEPLOY.txt
+UPLOAD_CODE_DIRECTLY.txt
+FINAL_FIX_NOW.txt
+SECURE_PRIVATE_DEPLOY.txt
+SIMPLEST_SOLUTION.md
+QUICK_FIX_NOW.md
+WHAT_TO_EXPECT.md
+DEPLOY_QUICK_REFERENCE.md
+RUN_THIS_NOW.md
+GET_AWS_CREDENTIALS.md
+CLOUDSHELL_COMMANDS.md
+
+# Keep these for production
+# README.md
+# USER_GUIDES/
+# START_HERE_COMPLETE_SOLUTION.md
+# FINAL_APP_DETAILS.md
+

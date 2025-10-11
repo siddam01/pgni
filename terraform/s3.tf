@@ -65,6 +65,8 @@ resource "aws_s3_bucket_lifecycle_configuration" "uploads" {
     id     = "delete-old-versions"
     status = "Enabled"
 
+    filter {}
+
     noncurrent_version_expiration {
       noncurrent_days = 90
     }
@@ -73,6 +75,8 @@ resource "aws_s3_bucket_lifecycle_configuration" "uploads" {
   rule {
     id     = "transition-to-ia"
     status = var.environment == "production" ? "Enabled" : "Disabled"
+
+    filter {}
 
     transition {
       days          = 30

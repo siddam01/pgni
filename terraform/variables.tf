@@ -82,7 +82,7 @@ variable "ec2_instance_type" {
 variable "ec2_volume_size" {
   description = "EC2 root volume size in GB"
   type        = number
-  default     = 20
+  default     = 30
 }
 
 # S3 Configuration

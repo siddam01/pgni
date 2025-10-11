@@ -14,6 +14,7 @@ resource "aws_ssm_parameter" "existing_db_endpoint" {
   description = "RDS database endpoint (existing database)"
   type        = "String"
   value       = "database-pgni.cezawkgguojl.us-east-1.rds.amazonaws.com:3306"
+  overwrite   = true
 
   tags = local.common_tags
 }
@@ -24,6 +25,7 @@ resource "aws_ssm_parameter" "existing_db_username" {
   description = "RDS database username"
   type        = "String"
   value       = var.db_username
+  overwrite   = true
 
   tags = local.common_tags
 }
@@ -34,6 +36,7 @@ resource "aws_ssm_parameter" "existing_db_password" {
   description = "RDS database password"
   type        = "SecureString"
   value       = var.db_password
+  overwrite   = true
 
   tags = local.common_tags
 }
@@ -44,6 +47,7 @@ resource "aws_ssm_parameter" "existing_db_name" {
   description = "RDS database name"
   type        = "String"
   value       = var.db_name
+  overwrite   = true
 
   tags = local.common_tags
 }
