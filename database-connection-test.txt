@@ -1,0 +1,61 @@
+=== PGNi Database Connection Information ===
+
+RDS Instance Details:
+---------------------
+Instance Name: database-pgni
+Endpoint: database-pgni.cezawkgguojl.us-east-1.rds.amazonaws.com
+Port: 3306
+Region: us-east-1
+
+Master Credentials:
+------------------
+Username: admin
+Password: Omsairamdb951#
+
+Database to Create:
+------------------
+Database Name: pgworld
+Character Set: utf8mb4
+Collation: utf8mb4_unicode_ci
+
+Connection String:
+-----------------
+mysql -h database-pgni.cezawkgguojl.us-east-1.rds.amazonaws.com -P 3306 -u admin -p
+
+When prompted, enter password: Omsairamdb951#
+
+After connecting, run:
+---------------------
+CREATE DATABASE IF NOT EXISTS pgworld CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE pgworld;
+SHOW DATABASES;
+
+Environment Variables for API:
+------------------------------
+DB_HOST=database-pgni.cezawkgguojl.us-east-1.rds.amazonaws.com
+DB_PORT=3306
+DB_USER=admin
+DB_PASSWORD=Omsairamdb951#
+DB_NAME=pgworld
+
+Full Connection String for Go:
+------------------------------
+admin:Omsairamdb951#@tcp(database-pgni.cezawkgguojl.us-east-1.rds.amazonaws.com:3306)/pgworld
+
+MySQL Workbench Connection:
+---------------------------
+Connection Name: PGNi Database
+Hostname: database-pgni.cezawkgguojl.us-east-1.rds.amazonaws.com
+Port: 3306
+Username: admin
+Password: Omsairamdb951#
+Default Schema: pgworld
+
+Test Connection:
+---------------
+From command line (if MySQL client installed):
+mysql -h database-pgni.cezawkgguojl.us-east-1.rds.amazonaws.com -P 3306 -u admin -pOmsairamdb951# -e "SHOW DATABASES;"
+
+Created: 2025-01-08
+Status: Ready to use
+

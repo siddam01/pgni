@@ -14,29 +14,29 @@ output "region" {
 # RDS Outputs
 output "rds_endpoint" {
   description = "RDS database endpoint"
-  value       = aws_db_instance.main.endpoint
+  value       = "database-pgni.cezawkgguojl.us-east-1.rds.amazonaws.com:3306"
 }
 
 output "rds_database_name" {
   description = "RDS database name"
-  value       = aws_db_instance.main.db_name
+  value       = var.db_name
 }
 
 output "rds_username" {
   description = "RDS master username"
-  value       = aws_db_instance.main.username
+  value       = var.db_username
   sensitive   = true
 }
 
 output "rds_password" {
   description = "RDS master password"
-  value       = local.db_password
+  value       = var.db_password
   sensitive   = true
 }
 
 output "rds_connection_string" {
   description = "MySQL connection string"
-  value       = "mysql -h ${split(":", aws_db_instance.main.endpoint)[0]} -u ${aws_db_instance.main.username} -p ${var.db_name}"
+  value       = "mysql -h database-pgni.cezawkgguojl.us-east-1.rds.amazonaws.com -u ${var.db_username} -p ${var.db_name}"
   sensitive   = true
 }
 
@@ -111,11 +111,11 @@ output "environment_file" {
   description = "Complete .env file content for API"
   value       = <<-EOF
     # Database Configuration
-    DB_HOST=${split(":", aws_db_instance.main.endpoint)[0]}
+    DB_HOST=database-pgni.cezawkgguojl.us-east-1.rds.amazonaws.com
     DB_PORT=3306
-    DB_USER=${aws_db_instance.main.username}
-    DB_PASSWORD=${local.db_password}
-    DB_NAME=${aws_db_instance.main.db_name}
+    DB_USER=${var.db_username}
+    DB_PASSWORD=${var.db_password}
+    DB_NAME=${var.db_name}
     
     # S3 Configuration
     AWS_REGION=${var.aws_region}
@@ -194,10 +194,10 @@ output "next_steps" {
     
     === RESOURCES CREATED ===
     
-    - RDS Database: ${aws_db_instance.main.endpoint}
+    - RDS Database: database-pgni.cezawkgguojl.us-east-1.rds.amazonaws.com (existing)
     - S3 Bucket: ${aws_s3_bucket.uploads.id}
     - EC2 Instance: ${aws_instance.api.id}
-    - Public IP: ${output.ec2_public_ip.value}
+    - Public IP: ${var.environment == "production" && length(aws_eip.api) > 0 ? aws_eip.api[0].public_ip : aws_instance.api.public_ip}
     
     ========================================
     

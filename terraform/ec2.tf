@@ -155,9 +155,9 @@ locals {
     # Create placeholder env file
     cat > /opt/pgworld/.env <<'ENV'
     # Environment variables will be populated during deployment
-    DB_HOST=${aws_db_instance.main.endpoint}
+    DB_HOST=database-pgni.cezawkgguojl.us-east-1.rds.amazonaws.com
     DB_PORT=3306
-    DB_NAME=${var.db_name}
+    DB_NAME=pgworld
     PORT=8080
     AWS_REGION=${var.aws_region}
     S3_BUCKET=${aws_s3_bucket.uploads.id}
@@ -232,7 +232,6 @@ resource "aws_instance" "api" {
   }
 
   depends_on = [
-    aws_db_instance.main,
     aws_s3_bucket.uploads
   ]
 }

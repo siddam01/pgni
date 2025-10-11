@@ -43,7 +43,10 @@ resource "aws_db_parameter_group" "main" {
 }
 
 # RDS MySQL Instance
+# DISABLED: Using existing database created manually (database-pgni)
+# See existing-rds.tf for configuration
 resource "aws_db_instance" "main" {
+  count = 0  # Disabled - using existing database
   identifier = "${local.name_prefix}-db"
 
   # Engine configuration
