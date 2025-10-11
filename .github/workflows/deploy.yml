@@ -55,17 +55,44 @@ jobs:
           name: pgworld-api
           path: pgworld-api-master/pgworld-api
           retention-days: 7
+      
+      - name: Build Success
+        run: |
+          echo "✅ Build successful!"
+          echo "📦 Artifact uploaded and ready for deployment"
+          echo ""
+          echo "To enable automatic deployment:"
+          echo "1. Configure GitHub Secrets"
+          echo "2. See: GITHUB_SECRETS_SETUP.md"
 
   deploy-preprod:
     name: Deploy to Pre-Production
     needs: build
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
+    # Only run if on develop branch AND all required secrets are configured
+    if: |
+      github.ref == 'refs/heads/develop' && 
+      github.event_name == 'push' &&
+      github.repository == 'siddam01/pgni'
     environment:
       name: pre-production
-      url: https://api-preprod.pgni.com
+      url: http://34.227.111.143:8080
     
     steps:
+      - name: Check secrets
+        run: |
+          if [ -z "${{ secrets.AWS_ACCESS_KEY_ID }}" ]; then
+            echo "❌ AWS_ACCESS_KEY_ID secret not configured"
+            echo "Please configure GitHub Secrets to enable auto-deployment"
+            echo "See: GITHUB_SECRETS_SETUP.md"
+            exit 1
+          fi
+          if [ -z "${{ secrets.PREPROD_HOST }}" ]; then
+            echo "❌ PREPROD_HOST secret not configured"
+            exit 1
+          fi
+          echo "✅ All secrets configured"
+      
       - name: Checkout code
         uses: actions/checkout@v4
       
@@ -103,17 +130,6 @@ jobs:
             sudo mv /tmp/pgworld-api /opt/pgworld/pgworld-api
             sudo chmod +x /opt/pgworld/pgworld-api
             
-            aws ssm get-parameters-by-path \
-              --path "/pgworld/preprod/" \
-              --with-decryption \
-              --region us-east-1 \
-              --query "Parameters[*].[Name,Value]" \
-              --output text | while read name value; do
-              param_name=$(echo $name | awk -F'/' '{print $NF}')
-              echo "$param_name=$value" >> /tmp/pgworld.env
-            done
-            sudo mv /tmp/pgworld.env /opt/pgworld/.env
-            
             sudo systemctl start pgworld-api
             sudo systemctl status pgworld-api
           EOF
@@ -123,19 +139,37 @@ jobs:
       - name: Health Check
         run: |
           sleep 10
-          curl -f https://api-preprod.pgni.com/ || exit 1
+          curl -f http://34.227.111.143:8080/health || exit 1
           echo "Pre-production deployment successful!"
 
   deploy-production:
     name: Deploy to Production
     needs: build
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    # Only run if on main branch AND all required secrets are configured
+    if: |
+      github.ref == 'refs/heads/main' && 
+      github.event_name == 'push' &&
+      github.repository == 'siddam01/pgni'
     environment:
       name: production
-      url: https://api.pgni.com
+      url: http://34.227.111.143:8080
     
     steps:
+      - name: Check secrets
+        run: |
+          if [ -z "${{ secrets.AWS_ACCESS_KEY_ID }}" ]; then
+            echo "❌ AWS_ACCESS_KEY_ID secret not configured"
+            echo "Please configure GitHub Secrets to enable auto-deployment"
+            echo "See: GITHUB_SECRETS_SETUP.md"
+            exit 1
+          fi
+          if [ -z "${{ secrets.PRODUCTION_HOST }}" ]; then
+            echo "❌ PRODUCTION_HOST secret not configured"
+            exit 1
+          fi
+          echo "✅ All secrets configured"
+      
       - name: Checkout code
         uses: actions/checkout@v4
       
@@ -173,17 +207,6 @@ jobs:
             sudo mv /tmp/pgworld-api /opt/pgworld/pgworld-api
             sudo chmod +x /opt/pgworld/pgworld-api
             
-            aws ssm get-parameters-by-path \
-              --path "/pgworld/production/" \
-              --with-decryption \
-              --region us-east-1 \
-              --query "Parameters[*].[Name,Value]" \
-              --output text | while read name value; do
-              param_name=$(echo $name | awk -F'/' '{print $NF}')
-              echo "$param_name=$value" >> /tmp/pgworld.env
-            done
-            sudo mv /tmp/pgworld.env /opt/pgworld/.env
-            
             sudo systemctl start pgworld-api
             sudo systemctl status pgworld-api
           EOF
@@ -193,7 +216,7 @@ jobs:
       - name: Health Check
         run: |
           sleep 10
-          curl -f https://api.pgni.com/ || exit 1
+          curl -f http://34.227.111.143:8080/health || exit 1
           echo "Production deployment successful!"
       
       - name: Rollback on Failure
@@ -218,4 +241,3 @@ jobs:
           
           rm private_key.pem
           exit 1
-
