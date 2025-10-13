@@ -36,8 +36,8 @@ variable "db_instance_class" {
   description = "RDS instance class"
   type        = map(string)
   default = {
-    preprod    = "db.t3.micro"
-    production = "db.t3.small"
+    preprod    = "db.t3.small"    # Upgraded from db.t3.micro for better DB performance
+    production = "db.t3.medium"   # Upgraded from db.t3.small for production workload
   }
 }
 
@@ -45,8 +45,8 @@ variable "db_allocated_storage" {
   description = "RDS allocated storage in GB"
   type        = map(number)
   default = {
-    preprod    = 20
-    production = 50
+    preprod    = 50   # Upgraded from 20GB for more database storage
+    production = 100  # Upgraded from 50GB for production data growth
   }
 }
 
@@ -74,15 +74,15 @@ variable "ec2_instance_type" {
   description = "EC2 instance type"
   type        = map(string)
   default = {
-    preprod    = "t3.micro"
-    production = "t3.small"
+    preprod    = "t3.medium"    # Upgraded from t3.micro for better performance
+    production = "t3.large"     # Upgraded from t3.small for production workload
   }
 }
 
 variable "ec2_volume_size" {
   description = "EC2 root volume size in GB"
   type        = number
-  default     = 30
+  default     = 50  # Upgraded from 30GB for more storage
 }
 
 # S3 Configuration

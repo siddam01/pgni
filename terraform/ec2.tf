@@ -205,6 +205,8 @@ resource "aws_instance" "api" {
   root_block_device {
     volume_size           = var.ec2_volume_size
     volume_type           = "gp3"
+    iops                  = 3000  # High IOPS for better disk performance
+    throughput            = 125   # MB/s throughput for faster I/O
     encrypted             = true
     kms_key_id            = var.enable_kms_encryption ? var.kms_key_id : null
     delete_on_termination = var.environment == "preprod"
