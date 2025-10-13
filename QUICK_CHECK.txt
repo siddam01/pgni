@@ -1,0 +1,97 @@
+#!/bin/bash
+# Quick check - Copy and paste this into CloudShell
+
+echo "=========================================="
+echo "🔍 Quick Status Check"
+echo "=========================================="
+echo ""
+
+echo "1. Testing API from internet..."
+RESPONSE=$(curl -s --connect-timeout 3 http://34.227.111.143:8080/health 2>&1)
+
+if [[ $RESPONSE == *"healthy"* ]]; then
+    echo "   ✅✅✅ API IS LIVE AND WORKING! ✅✅✅"
+    echo "   Response: $RESPONSE"
+    echo ""
+    echo "=========================================="
+    echo "🎉 DEPLOYMENT COMPLETED SUCCESSFULLY!"
+    echo "=========================================="
+    echo ""
+    echo "Your API is accessible at:"
+    echo "  http://34.227.111.143:8080/health"
+    echo ""
+    echo "Next steps:"
+    echo "1. Open browser: http://34.227.111.143:8080/health"
+    echo "2. Configure mobile apps with: http://34.227.111.143:8080"
+    echo ""
+elif [[ $RESPONSE == *"connect"* ]] || [[ $RESPONSE == *"timeout"* ]]; then
+    echo "   ⏳ API not responding yet"
+    echo "   Error: $RESPONSE"
+    echo ""
+    echo "2. Checking if deployment is still running..."
+    
+    # Check if API binary exists
+    API_EXISTS=$(ssh -i cloudshell-key.pem -o StrictHostKeyChecking=no ec2-user@34.227.111.143 "ls -la /opt/pgworld/pgworld-api 2>/dev/null" 2>&1)
+    
+    if [[ $API_EXISTS == *"pgworld-api"* ]]; then
+        echo "   ✅ API binary is deployed"
+        echo ""
+        echo "3. Checking if service is running..."
+        SERVICE_STATUS=$(ssh -i cloudshell-key.pem -o StrictHostKeyChecking=no ec2-user@34.227.111.143 "sudo systemctl is-active pgworld-api" 2>&1)
+        
+        if [[ $SERVICE_STATUS == "active" ]]; then
+            echo "   ✅ Service is running"
+            echo ""
+            echo "4. Checking internal connection..."
+            INTERNAL=$(ssh -i cloudshell-key.pem -o StrictHostKeyChecking=no ec2-user@34.227.111.143 "curl -s http://localhost:8080/health" 2>&1)
+            
+            if [[ $INTERNAL == *"healthy"* ]]; then
+                echo "   ✅ API works internally: $INTERNAL"
+                echo "   ⚠️  But not accessible from internet"
+                echo ""
+                echo "   ISSUE: Security group or firewall blocking external access"
+                echo "   Let me help you fix this!"
+            else
+                echo "   ❌ API not responding internally: $INTERNAL"
+                echo ""
+                echo "   Checking logs..."
+                ssh -i cloudshell-key.pem -o StrictHostKeyChecking=no ec2-user@34.227.111.143 "sudo journalctl -u pgworld-api -n 20 --no-pager"
+            fi
+        else
+            echo "   ❌ Service not running: $SERVICE_STATUS"
+            echo ""
+            echo "   Trying to start it..."
+            ssh -i cloudshell-key.pem -o StrictHostKeyChecking=no ec2-user@34.227.111.143 "sudo systemctl start pgworld-api"
+            sleep 3
+            echo "   Checking again..."
+            NEW_STATUS=$(ssh -i cloudshell-key.pem -o StrictHostKeyChecking=no ec2-user@34.227.111.143 "sudo systemctl is-active pgworld-api" 2>&1)
+            
+            if [[ $NEW_STATUS == "active" ]]; then
+                echo "   ✅ Service started!"
+                echo "   Wait 5 seconds and test again:"
+                echo "   curl http://34.227.111.143:8080/health"
+            else
+                echo "   ❌ Failed to start. Checking logs..."
+                ssh -i cloudshell-key.pem -o StrictHostKeyChecking=no ec2-user@34.227.111.143 "sudo journalctl -u pgworld-api -n 30 --no-pager"
+            fi
+        fi
+    else
+        echo "   ⏳ API binary not found - deployment still in progress"
+        echo ""
+        echo "   Status: DEPLOYMENT IS STILL RUNNING"
+        echo ""
+        echo "   What to do:"
+        echo "   1. Wait 2-3 more minutes"
+        echo "   2. Look at your deployment window - is it still showing progress?"
+        echo "   3. Run this check again after waiting"
+    fi
+else
+    echo "   ❓ Unexpected response: $RESPONSE"
+    echo ""
+    echo "   Let me check the deployment..."
+    ssh -i cloudshell-key.pem -o StrictHostKeyChecking=no ec2-user@34.227.111.143 "ls -la /opt/pgworld/ 2>&1"
+fi
+
+echo ""
+echo "=========================================="
+
