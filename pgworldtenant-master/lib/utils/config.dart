@@ -1,5 +1,5 @@
 class API {
-  static const URL = "test-pgworld.ap-south-1.elasticbeanstalk.com";
+  static const URL = "34.227.111.143:8080";
   static const ADMIN = "admin";
   static const BILL = "bill";
   static const DASHBOARD = "dashboard";
