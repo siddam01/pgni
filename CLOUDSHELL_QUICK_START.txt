@@ -1,0 +1,62 @@
+========================================
+ DEPLOY FULL APP IN CLOUDSHELL
+========================================
+
+⚠️  YOU CANNOT RUN .bat FILES IN CLOUDSHELL!
+    .bat = Windows only
+    CloudShell = Linux (bash)
+
+✅  USE THIS INSTEAD: DEPLOY_FULL_APP_CLOUDSHELL.sh
+
+========================================
+ COPY & PASTE INTO CLOUDSHELL:
+========================================
+
+cd ~
+git clone https://github.com/siddam01/pgni.git || (cd pgni && git pull)
+cd pgni
+
+# Get SSH key
+curl -O https://raw.githubusercontent.com/siddam01/pgni/main/terraform/ssh-key.txt
+mv ssh-key.txt cloudshell-key.pem
+chmod 600 cloudshell-key.pem
+
+# Deploy
+chmod +x DEPLOY_FULL_APP_CLOUDSHELL.sh
+./DEPLOY_FULL_APP_CLOUDSHELL.sh
+
+========================================
+ WHAT HAPPENS:
+========================================
+
+✅ Installs Flutter automatically
+✅ Builds Admin App (37 pages)
+✅ Builds Tenant App (28 pages)
+✅ Uploads to EC2
+✅ Configures Nginx
+✅ Makes apps LIVE!
+
+⏱️  Time: 12-18 minutes
+
+========================================
+ AFTER DEPLOYMENT:
+========================================
+
+🌐 Admin:  http://34.227.111.143/admin
+   Login:  admin@pgni.com / password123
+
+🌐 Tenant: http://34.227.111.143/tenant
+   Login:  tenant@pgni.com / password123
+
+========================================
+ YOUR FULL APP WILL BE LIVE!
+========================================
+
+✅ All 65 pages working
+✅ Login functionality
+✅ All features enabled
+✅ Connected to database
+✅ Ready for users
+
+========================================
+
