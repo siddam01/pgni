@@ -82,7 +82,7 @@ variable "ec2_instance_type" {
 variable "ec2_volume_size" {
   description = "EC2 root volume size in GB"
   type        = number
-  default     = 50  # Upgraded from 30GB for more storage
+  default     = 100  # Upgraded to 100GB for Flutter builds and application deployment
 }
 
 # S3 Configuration

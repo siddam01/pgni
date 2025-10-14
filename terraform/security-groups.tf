@@ -62,6 +62,17 @@ resource "aws_security_group_rule" "ec2_ssh" {
   description       = "Allow SSH access"
 }
 
+# Allow HTTP access on port 80 (Web Server / Nginx)
+resource "aws_security_group_rule" "ec2_http_80" {
+  type              = "ingress"
+  from_port         = 80
+  to_port           = 80
+  protocol          = "tcp"
+  cidr_blocks       = var.allowed_http_cidrs
+  security_group_id = aws_security_group.ec2.id
+  description       = "Allow HTTP access for web server (Nginx)"
+}
+
 # Allow HTTP access on port 8080 (API)
 resource "aws_security_group_rule" "ec2_http_8080" {
   type              = "ingress"
