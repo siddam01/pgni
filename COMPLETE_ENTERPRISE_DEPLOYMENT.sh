@@ -1,549 +1,394 @@
 #!/bin/bash
-#================================================================
+#==============================================================================
 # COMPLETE ENTERPRISE DEPLOYMENT SCRIPT
-# Senior Technical Lead - Production Grade Solution
-#================================================================
-# This script:
-# 1. Upgrades EC2 disk space to 100GB
-# 2. Cleans and expands filesystem
-# 3. Installs Flutter on EC2
-# 4. Builds both Admin and Tenant apps
-# 5. Deploys complete application
-# 6. Configures for mobile and laptop testing
-#================================================================
+# Deploys Full PGNi Application: Backend API + Frontend (Admin & Tenant)
+#==============================================================================
 
-set -e  # Exit on error
+set -e
 
-# Colors for output
+# Configuration
+EC2_IP="34.227.111.143"
+EC2_USER="ec2-user"
+SSH_KEY="cloudshell-key.pem"
+REGION="us-east-1"
+INSTANCE_ID="i-0b5f620584d1e4ee9"
+
+# Color codes for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-# Configuration
-EC2_HOST="34.227.111.143"
-EC2_USER="ec2-user"
-EC2_INSTANCE_ID="i-0909d462845deb151"
-AWS_REGION="us-east-1"
+# Logging functions
+log_info() { echo -e "${BLUE}[INFO]${NC} $1"; }
+log_success() { echo -e "${GREEN}[SUCCESS]${NC} $1"; }
+log_warning() { echo -e "${YELLOW}[WARNING]${NC} $1"; }
+log_error() { echo -e "${RED}[ERROR]${NC} $1"; }
 
-echo -e "${BLUE}================================================================${NC}"
-echo -e "${BLUE}   COMPLETE ENTERPRISE DEPLOYMENT${NC}"
-echo -e "${BLUE}   Production-Grade Full Stack Application${NC}"
-echo -e "${BLUE}================================================================${NC}"
+echo "=============================================="
+echo "  PGNi Complete Enterprise Deployment"
+echo "=============================================="
+echo ""
+echo "Deployment Target: $EC2_IP"
+echo "Deployment Time: $(date)"
 echo ""
 
-#================================================================
-# PHASE 1: INFRASTRUCTURE UPGRADE
-#================================================================
-echo -e "${YELLOW}PHASE 1: Infrastructure Upgrade${NC}"
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo ""
+#==============================================================================
+# PHASE 1: INFRASTRUCTURE VALIDATION & EXPANSION
+#==============================================================================
 
-echo "Step 1.1: Upgrading Terraform configuration..."
-cd ~/pgni/terraform || { echo "Error: terraform directory not found"; exit 1; }
+log_info "PHASE 1/6: Infrastructure Validation & Expansion"
+echo "----------------------------------------------"
 
-# Update variables
-echo "  → Setting EC2 volume to 100GB"
-echo "  → Confirmed in terraform/variables.tf"
-
-echo ""
-echo "Step 1.2: Applying infrastructure changes..."
-echo "  This will:"
-echo "  ✓ Expand EC2 disk from current size to 100GB"
-echo "  ✓ No downtime - online resize"
-echo "  ✓ Preserve all data"
-echo ""
-
-# Initialize terraform if needed
-if [ ! -d ".terraform" ]; then
-    echo "  → Initializing Terraform..."
-    terraform init
+# Check if SSH key exists
+if [ ! -f "$SSH_KEY" ]; then
+    log_error "SSH key not found: $SSH_KEY"
+    log_info "Downloading SSH key from repository..."
+    curl -s -o "$SSH_KEY" https://raw.githubusercontent.com/siddam01/pgni/main/terraform/ssh-key.txt
+    chmod 600 "$SSH_KEY"
+    log_success "SSH key downloaded"
 fi
 
-# Plan changes
-echo "  → Planning infrastructure changes..."
-terraform plan -target=aws_instance.api -out=upgrade.tfplan
+# Check EC2 instance status
+log_info "Checking EC2 instance status..."
+INSTANCE_STATE=$(aws ec2 describe-instances --instance-ids "$INSTANCE_ID" --region "$REGION" --query 'Reservations[0].Instances[0].State.Name' --output text 2>/dev/null || echo "unknown")
 
-# Apply changes
-echo ""
-read -p "Press Enter to apply infrastructure upgrade, or Ctrl+C to cancel..."
-terraform apply upgrade.tfplan
+if [ "$INSTANCE_STATE" != "running" ]; then
+    log_error "EC2 instance is not running (state: $INSTANCE_STATE)"
+    exit 1
+fi
+log_success "EC2 instance is running"
 
-echo -e "${GREEN}✓ Infrastructure upgraded successfully${NC}"
-echo ""
+# Check and expand disk if needed
+log_info "Checking disk space..."
+VOLUME_ID=$(aws ec2 describe-instances --instance-ids "$INSTANCE_ID" --region "$REGION" --query 'Reservations[0].Instances[0].BlockDeviceMappings[0].Ebs.VolumeId' --output text)
+CURRENT_SIZE=$(aws ec2 describe-volumes --volume-ids "$VOLUME_ID" --region "$REGION" --query 'Volumes[0].Size' --output text)
 
-#================================================================
-# PHASE 2: FILESYSTEM EXPANSION ON EC2
-#================================================================
-echo -e "${YELLOW}PHASE 2: Filesystem Expansion${NC}"
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo ""
+log_info "Current disk size: ${CURRENT_SIZE}GB"
 
-echo "Step 2.1: Checking current disk usage..."
-ssh -o StrictHostKeyChecking=no $EC2_USER@$EC2_HOST "df -h /"
-
-echo ""
-echo "Step 2.2: Expanding filesystem..."
-ssh -o StrictHostKeyChecking=no $EC2_USER@$EC2_HOST << 'EXPAND_SCRIPT'
-#!/bin/bash
-set -e
-
-echo "  → Growing partition..."
-sudo growpart /dev/nvme0n1 1 2>/dev/null || echo "  (Partition already at maximum size)"
-
-echo "  → Resizing filesystem..."
-sudo resize2fs /dev/nvme0n1p1 || sudo xfs_growfs / || echo "  (Filesystem already resized)"
-
-echo ""
-echo "✓ Filesystem expanded"
-echo ""
-echo "New disk space:"
-df -h /
-EXPAND_SCRIPT
-
-echo -e "${GREEN}✓ Filesystem expanded successfully${NC}"
-echo ""
-
-#================================================================
-# PHASE 3: CLEANUP AND PREPARATION
-#================================================================
-echo -e "${YELLOW}PHASE 3: Cleanup and Preparation${NC}"
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo ""
-
-echo "Step 3.1: Cleaning up temporary files..."
-ssh -o StrictHostKeyChecking=no $EC2_USER@$EC2_HOST << 'CLEANUP_SCRIPT'
-#!/bin/bash
-
-echo "  → Removing old Flutter installation..."
-sudo rm -rf /tmp/flutter /tmp/flutter_linux*.tar.xz
-
-echo "  → Cleaning old builds..."
-sudo rm -rf /tmp/pgni
-
-echo "  → Clearing package cache..."
-sudo yum clean all
-
-echo ""
-echo "Disk space after cleanup:"
-df -h /
-CLEANUP_SCRIPT
-
-echo -e "${GREEN}✓ Cleanup completed${NC}"
-echo ""
-
-#================================================================
-# PHASE 4: INSTALL FLUTTER ON EC2
-#================================================================
-echo -e "${YELLOW}PHASE 4: Flutter Installation${NC}"
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo ""
-
-echo "Step 4.1: Installing prerequisites..."
-ssh -o StrictHostKeyChecking=no $EC2_USER@$EC2_HOST << 'PREREQ_SCRIPT'
-#!/bin/bash
-set -e
-
-echo "  → Installing git, wget, tar, xz, unzip..."
-sudo yum install -y git wget tar xz unzip >/dev/null 2>&1
-echo "  ✓ Prerequisites installed"
-PREREQ_SCRIPT
-
-echo ""
-echo "Step 4.2: Installing Flutter SDK..."
-echo "  This will take 5-7 minutes..."
-ssh -o StrictHostKeyChecking=no $EC2_USER@$EC2_HOST << 'FLUTTER_INSTALL'
-#!/bin/bash
-set -e
-
-cd /opt
-if [ ! -d "flutter" ]; then
-    echo "  → Downloading Flutter SDK (450 MB)..."
-    sudo wget -q --show-progress https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_3.16.0-stable.tar.xz
+if [ "$CURRENT_SIZE" -lt 100 ]; then
+    log_warning "Disk size is less than 100GB, expanding..."
     
-    echo "  → Extracting Flutter..."
-    sudo tar xf flutter_linux_3.16.0-stable.tar.xz
-    sudo rm flutter_linux_3.16.0-stable.tar.xz
+    # Modify volume size
+    aws ec2 modify-volume --volume-id "$VOLUME_ID" --size 100 --region "$REGION"
     
-    echo "  → Setting permissions..."
-    sudo chown -R ec2-user:ec2-user /opt/flutter
+    log_info "Waiting for volume modification to complete..."
+    sleep 10
     
-    echo "  → Adding to PATH..."
-    echo 'export PATH="/opt/flutter/bin:$PATH"' | sudo tee -a /etc/profile.d/flutter.sh
-    source /etc/profile.d/flutter.sh
+    # Wait for modification to complete
+    while true; do
+        MOD_STATE=$(aws ec2 describe-volumes-modifications --volume-ids "$VOLUME_ID" --region "$REGION" --query 'VolumesModifications[0].ModificationState' --output text)
+        if [ "$MOD_STATE" == "optimizing" ] || [ "$MOD_STATE" == "completed" ]; then
+            break
+        fi
+        echo -n "."
+        sleep 5
+    done
+    echo ""
+    
+    log_success "Volume expanded to 100GB"
+    
+    # Expand the filesystem on EC2
+    log_info "Expanding filesystem on EC2..."
+    ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no "${EC2_USER}@${EC2_IP}" << 'EOF'
+        sudo growpart /dev/xvda 1 2>/dev/null || sudo growpart /dev/nvme0n1 1 2>/dev/null || true
+        sudo resize2fs /dev/xvda1 2>/dev/null || sudo xfs_growfs / 2>/dev/null || true
+        df -h / | tail -1
+EOF
+    log_success "Filesystem expanded"
 else
-    echo "  ✓ Flutter already installed"
+    log_success "Disk size is adequate (${CURRENT_SIZE}GB)"
 fi
 
-# Verify installation
-export PATH="/opt/flutter/bin:$PATH"
-flutter --version
-
-echo ""
-echo "✓ Flutter installed successfully"
-FLUTTER_INSTALL
-
-echo -e "${GREEN}✓ Flutter installation completed${NC}"
 echo ""
 
-#================================================================
-# PHASE 5: BUILD APPLICATIONS
-#================================================================
-echo -e "${YELLOW}PHASE 5: Building Applications${NC}"
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo ""
+#==============================================================================
+# PHASE 2: INSTALL PREREQUISITES ON EC2
+#==============================================================================
 
-echo "Step 5.1: Cloning repository..."
-ssh -o StrictHostKeyChecking=no $EC2_USER@$EC2_HOST << 'CLONE_SCRIPT'
-#!/bin/bash
+log_info "PHASE 2/6: Installing Prerequisites on EC2"
+echo "----------------------------------------------"
+
+ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no "${EC2_USER}@${EC2_IP}" << 'EOF'
 set -e
 
-cd /opt
-if [ -d "pgni" ]; then
-    echo "  → Updating existing repository..."
-    cd pgni
+echo "[1/5] Updating system packages..."
+sudo yum update -y > /dev/null 2>&1
+
+echo "[2/5] Installing development tools..."
+sudo yum install -y git wget curl unzip nginx > /dev/null 2>&1
+
+echo "[3/5] Checking Flutter SDK..."
+if [ ! -d "/home/ec2-user/flutter" ]; then
+    echo "      Downloading Flutter SDK (this may take 5-10 minutes)..."
+    cd /home/ec2-user
+    wget -q https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_3.16.0-stable.tar.xz
+    echo "      Extracting Flutter SDK..."
+    tar xf flutter_linux_3.16.0-stable.tar.xz
+    rm -f flutter_linux_3.16.0-stable.tar.xz
+    echo "      Flutter SDK installed"
+else
+    echo "      Flutter SDK already installed"
+fi
+
+echo "[4/5] Setting up Flutter environment..."
+export PATH="$PATH:/home/ec2-user/flutter/bin"
+echo 'export PATH="$PATH:/home/ec2-user/flutter/bin"' >> ~/.bashrc
+
+echo "[5/5] Running Flutter doctor..."
+flutter doctor -v || true
+
+echo ""
+echo "Prerequisites installation complete!"
+df -h / | tail -1
+EOF
+
+log_success "Prerequisites installed"
+echo ""
+
+#==============================================================================
+# PHASE 3: BUILD FLUTTER APPLICATIONS
+#==============================================================================
+
+log_info "PHASE 3/6: Building Flutter Applications"
+echo "----------------------------------------------"
+
+ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no "${EC2_USER}@${EC2_IP}" << 'EOF'
+set -e
+
+export PATH="$PATH:/home/ec2-user/flutter/bin"
+
+# Clone/update repository
+echo "[1/6] Updating source code..."
+if [ -d "/home/ec2-user/pgni" ]; then
+    cd /home/ec2-user/pgni
     git pull
 else
-    echo "  → Cloning repository..."
+    cd /home/ec2-user
     git clone https://github.com/siddam01/pgni.git
     cd pgni
 fi
 
-echo "  ✓ Repository ready"
-CLONE_SCRIPT
-
 echo ""
-echo "Step 5.2: Building Admin App (37 pages)..."
-echo "  This will take 5-8 minutes..."
-ssh -o StrictHostKeyChecking=no $EC2_USER@$EC2_HOST << 'BUILD_ADMIN'
-#!/bin/bash
-set -e
-export PATH="/opt/flutter/bin:$PATH"
+echo "[2/6] Configuring Admin App..."
+cd /home/ec2-user/pgni/pgworld-master
 
-cd /opt/pgni/pgworld-master
+# Update API URL in config
+sed -i 's|static const URL = ".*";|static const URL = "34.227.111.143:8080";|' lib/utils/config.dart
 
-echo "  → Cleaning previous build..."
-flutter clean >/dev/null 2>&1
-
-echo "  → Getting dependencies..."
+echo "[3/6] Building Admin App (Flutter Web)..."
+flutter clean > /dev/null 2>&1 || true
 flutter pub get
-
-echo "  → Building web app (release mode)..."
 flutter build web --release
 
 echo ""
-echo "  ✓ Admin App built successfully"
-echo "  Size: $(du -sh build/web | cut -f1)"
-BUILD_ADMIN
+echo "[4/6] Configuring Tenant App..."
+cd /home/ec2-user/pgni/pgworldtenant-master
 
-echo ""
-echo "Step 5.3: Building Tenant App (28 pages)..."
-echo "  This will take 5-8 minutes..."
-ssh -o StrictHostKeyChecking=no $EC2_USER@$EC2_HOST << 'BUILD_TENANT'
-#!/bin/bash
-set -e
-export PATH="/opt/flutter/bin:$PATH"
+# Update API URL in config
+sed -i 's|static const URL = ".*";|static const URL = "34.227.111.143:8080";|' lib/utils/config.dart
 
-cd /opt/pgni/pgworldtenant-master
-
-echo "  → Cleaning previous build..."
-flutter clean >/dev/null 2>&1
-
-echo "  → Getting dependencies..."
+echo "[5/6] Building Tenant App (Flutter Web)..."
+flutter clean > /dev/null 2>&1 || true
 flutter pub get
-
-echo "  → Building web app (release mode)..."
 flutter build web --release
 
 echo ""
-echo "  ✓ Tenant App built successfully"
-echo "  Size: $(du -sh build/web | cut -f1)"
-BUILD_TENANT
+echo "[6/6] Build summary:"
+echo "    Admin App: $(du -sh /home/ec2-user/pgni/pgworld-master/build/web | cut -f1)"
+echo "    Tenant App: $(du -sh /home/ec2-user/pgni/pgworldtenant-master/build/web | cut -f1)"
 
-echo -e "${GREEN}✓ Both applications built successfully${NC}"
+echo ""
+echo "Flutter applications built successfully!"
+EOF
+
+log_success "Flutter applications built"
 echo ""
 
-#================================================================
-# PHASE 6: DEPLOY TO WEB SERVER
-#================================================================
-echo -e "${YELLOW}PHASE 6: Deployment to Web Server${NC}"
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo ""
+#==============================================================================
+# PHASE 4: DEPLOY FRONTEND TO NGINX
+#==============================================================================
 
-echo "Step 6.1: Installing Nginx..."
-ssh -o StrictHostKeyChecking=no $EC2_USER@$EC2_HOST << 'NGINX_INSTALL'
-#!/bin/bash
+log_info "PHASE 4/6: Deploying Frontend to Nginx"
+echo "----------------------------------------------"
+
+ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no "${EC2_USER}@${EC2_IP}" << 'EOF'
 set -e
 
-if ! command -v nginx &> /dev/null; then
-    echo "  → Installing Nginx..."
-    sudo yum install -y nginx >/dev/null 2>&1
-    sudo systemctl enable nginx
-    sudo systemctl start nginx
-    echo "  ✓ Nginx installed"
-else
-    echo "  ✓ Nginx already installed"
-fi
-NGINX_INSTALL
+echo "[1/4] Creating web directories..."
+sudo mkdir -p /usr/share/nginx/html/admin
+sudo mkdir -p /usr/share/nginx/html/tenant
+
+echo "[2/4] Deploying Admin App..."
+sudo rm -rf /usr/share/nginx/html/admin/*
+sudo cp -r /home/ec2-user/pgni/pgworld-master/build/web/* /usr/share/nginx/html/admin/
+
+echo "[3/4] Deploying Tenant App..."
+sudo rm -rf /usr/share/nginx/html/tenant/*
+sudo cp -r /home/ec2-user/pgni/pgworldtenant-master/build/web/* /usr/share/nginx/html/tenant/
+
+echo "[4/4] Setting permissions..."
+sudo chown -R nginx:nginx /usr/share/nginx/html
+sudo chmod -R 755 /usr/share/nginx/html
 
 echo ""
-echo "Step 6.2: Deploying applications..."
-ssh -o StrictHostKeyChecking=no $EC2_USER@$EC2_HOST << 'DEPLOY_APPS'
-#!/bin/bash
-set -e
+echo "Frontend deployed successfully!"
+EOF
 
-echo "  → Backing up existing deployments..."
-sudo rm -rf /var/www/html/admin_backup /var/www/html/tenant_backup 2>/dev/null || true
-sudo mv /var/www/html/admin /var/www/html/admin_backup 2>/dev/null || true
-sudo mv /var/www/html/tenant /var/www/html/tenant_backup 2>/dev/null || true
-
-echo "  → Creating directories..."
-sudo mkdir -p /var/www/html/admin /var/www/html/tenant
-
-echo "  → Deploying Admin App..."
-sudo cp -r /opt/pgni/pgworld-master/build/web/* /var/www/html/admin/
-
-echo "  → Deploying Tenant App..."
-sudo cp -r /opt/pgni/pgworldtenant-master/build/web/* /var/www/html/tenant/
-
-echo "  → Setting permissions..."
-sudo chown -R ec2-user:ec2-user /var/www/html
-
-echo "  ✓ Applications deployed"
-DEPLOY_APPS
-
+log_success "Frontend deployed to Nginx"
 echo ""
-echo "Step 6.3: Configuring Nginx..."
-ssh -o StrictHostKeyChecking=no $EC2_USER@$EC2_HOST << 'NGINX_CONFIG'
-#!/bin/bash
+
+#==============================================================================
+# PHASE 5: CONFIGURE NGINX
+#==============================================================================
+
+log_info "PHASE 5/6: Configuring Nginx"
+echo "----------------------------------------------"
+
+ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no "${EC2_USER}@${EC2_IP}" << 'EOF'
 set -e
 
-sudo tee /etc/nginx/conf.d/pgni.conf > /dev/null << 'NGINX_CONF_CONTENT'
+echo "[1/3] Creating Nginx configuration..."
+sudo tee /etc/nginx/conf.d/pgni.conf > /dev/null << 'NGINX_CONF'
+# Admin App
 server {
-    listen 80 default_server;
+    listen 80;
     server_name _;
     
-    # Security headers
-    add_header X-Frame-Options "SAMEORIGIN" always;
-    add_header X-Content-Type-Options "nosniff" always;
-    add_header X-XSS-Protection "1; mode=block" always;
+    # Root redirects to admin
+    location = / {
+        return 301 /admin/;
+    }
     
     # Admin App
-    location /admin {
-        alias /var/www/html/admin;
-        index index.html;
+    location /admin/ {
+        alias /usr/share/nginx/html/admin/;
         try_files $uri $uri/ /admin/index.html;
         
-        # Cache control
-        location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
-            expires 1y;
-            add_header Cache-Control "public, immutable";
-        }
+        # CORS headers
+        add_header 'Access-Control-Allow-Origin' '*' always;
+        add_header 'Access-Control-Allow-Methods' 'GET, POST, PUT, DELETE, OPTIONS' always;
+        add_header 'Access-Control-Allow-Headers' 'DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization' always;
     }
     
     # Tenant App
-    location /tenant {
-        alias /var/www/html/tenant;
-        index index.html;
+    location /tenant/ {
+        alias /usr/share/nginx/html/tenant/;
         try_files $uri $uri/ /tenant/index.html;
         
-        # Cache control
-        location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
-            expires 1y;
-            add_header Cache-Control "public, immutable";
-        }
+        # CORS headers
+        add_header 'Access-Control-Allow-Origin' '*' always;
+        add_header 'Access-Control-Allow-Methods' 'GET, POST, PUT, DELETE, OPTIONS' always;
+        add_header 'Access-Control-Allow-Headers' 'DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization' always;
     }
     
     # API Proxy
-    location /api {
-        proxy_pass http://localhost:8080;
+    location /api/ {
+        proxy_pass http://localhost:8080/;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
         proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
-        
-        # Timeouts
-        proxy_connect_timeout 60s;
-        proxy_send_timeout 60s;
-        proxy_read_timeout 60s;
     }
     
-    # Root redirect
-    location = / {
-        return 301 /admin;
-    }
-    
-    # Health check endpoint
+    # Health check
     location /health {
-        access_log off;
-        return 200 "OK\n";
-        add_header Content-Type text/plain;
+        proxy_pass http://localhost:8080/health;
     }
 }
-NGINX_CONF_CONTENT
+NGINX_CONF
 
-echo "  → Testing Nginx configuration..."
+echo "[2/3] Testing Nginx configuration..."
 sudo nginx -t
 
-echo "  → Reloading Nginx..."
-sudo systemctl reload nginx
+echo "[3/3] Starting Nginx..."
+sudo systemctl enable nginx
+sudo systemctl restart nginx
 
-echo "  ✓ Nginx configured and reloaded"
-NGINX_CONFIG
+echo ""
+echo "Nginx configured and running!"
+EOF
 
-echo -e "${GREEN}✓ Deployment completed successfully${NC}"
+log_success "Nginx configured"
 echo ""
 
-#================================================================
-# PHASE 7: VERIFICATION AND TESTING
-#================================================================
-echo -e "${YELLOW}PHASE 7: Verification and Testing${NC}"
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+#==============================================================================
+# PHASE 6: VALIDATION & HEALTH CHECKS
+#==============================================================================
+
+log_info "PHASE 6/6: Validation & Health Checks"
+echo "----------------------------------------------"
+
+log_info "Waiting for services to stabilize..."
+sleep 5
+
+echo ""
+echo "Running health checks..."
 echo ""
 
-echo "Step 7.1: Testing endpoints..."
-sleep 3
-
-echo "  → Admin UI:"
-ADMIN_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://$EC2_HOST/admin)
-if [ "$ADMIN_STATUS" = "200" ]; then
-    echo -e "    ${GREEN}✓ HTTP $ADMIN_STATUS - OK${NC}"
+# Check API
+log_info "Checking Backend API..."
+API_RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" "http://${EC2_IP}:8080/health" || echo "000")
+if [ "$API_RESPONSE" == "200" ]; then
+    log_success "Backend API is healthy (HTTP $API_RESPONSE)"
 else
-    echo -e "    ${RED}✗ HTTP $ADMIN_STATUS - FAILED${NC}"
+    log_error "Backend API check failed (HTTP $API_RESPONSE)"
 fi
 
-echo "  → Tenant UI:"
-TENANT_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://$EC2_HOST/tenant)
-if [ "$TENANT_STATUS" = "200" ]; then
-    echo -e "    ${GREEN}✓ HTTP $TENANT_STATUS - OK${NC}"
+# Check Admin App
+log_info "Checking Admin App..."
+ADMIN_RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" "http://${EC2_IP}/admin/" || echo "000")
+if [ "$ADMIN_RESPONSE" == "200" ]; then
+    log_success "Admin App is accessible (HTTP $ADMIN_RESPONSE)"
 else
-    echo -e "    ${RED}✗ HTTP $TENANT_STATUS - FAILED${NC}"
+    log_error "Admin App check failed (HTTP $ADMIN_RESPONSE)"
 fi
 
-echo "  → API Health:"
-API_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://$EC2_HOST:8080/health)
-if [ "$API_STATUS" = "200" ]; then
-    echo -e "    ${GREEN}✓ HTTP $API_STATUS - OK${NC}"
+# Check Tenant App
+log_info "Checking Tenant App..."
+TENANT_RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" "http://${EC2_IP}/tenant/" || echo "000")
+if [ "$TENANT_RESPONSE" == "200" ]; then
+    log_success "Tenant App is accessible (HTTP $TENANT_RESPONSE)"
 else
-    echo -e "    ${RED}✗ HTTP $API_STATUS - FAILED${NC}"
+    log_error "Tenant App check failed (HTTP $TENANT_RESPONSE)"
+fi
+
+# Check Nginx
+log_info "Checking Nginx status..."
+NGINX_STATUS=$(ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no "${EC2_USER}@${EC2_IP}" "sudo systemctl is-active nginx" || echo "inactive")
+if [ "$NGINX_STATUS" == "active" ]; then
+    log_success "Nginx is running"
+else
+    log_error "Nginx is not running"
 fi
 
 echo ""
-echo "Step 7.2: Checking deployment sizes..."
-ssh -o StrictHostKeyChecking=no $EC2_USER@$EC2_HOST << 'CHECK_SIZES'
-#!/bin/bash
-echo "  → Admin App: $(du -sh /var/www/html/admin | cut -f1)"
-echo "  → Tenant App: $(du -sh /var/www/html/tenant | cut -f1)"
-echo "  → Total: $(du -sh /var/www/html | cut -f1)"
-CHECK_SIZES
-
+echo "=============================================="
+echo "  DEPLOYMENT COMPLETE!"
+echo "=============================================="
 echo ""
-echo "Step 7.3: Final disk space check..."
-ssh -o StrictHostKeyChecking=no $EC2_USER@$EC2_HOST "df -h / | tail -1"
-
-echo -e "${GREEN}✓ All verification checks passed${NC}"
+echo "Application URLs:"
+echo "  Admin Portal:  http://${EC2_IP}/admin/"
+echo "  Tenant Portal: http://${EC2_IP}/tenant/"
+echo "  Backend API:   http://${EC2_IP}:8080/health"
 echo ""
-
-#================================================================
-# DEPLOYMENT COMPLETE
-#================================================================
-echo -e "${GREEN}================================================================${NC}"
-echo -e "${GREEN}   ✓ DEPLOYMENT COMPLETE!${NC}"
-echo -e "${GREEN}================================================================${NC}"
+echo "Test Accounts:"
+echo "  Super Admin:"
+echo "    Email: admin@pgworld.com"
+echo "    Password: Admin@123"
 echo ""
-echo -e "${BLUE}📊 DEPLOYMENT SUMMARY:${NC}"
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "  PG Owner:"
+echo "    Email: owner@pg.com"
+echo "    Password: Owner@123"
 echo ""
-echo "✅ Infrastructure:"
-echo "   • EC2 Disk Space: Upgraded to 100GB"
-echo "   • Instance Type: t3.medium"
-echo "   • Region: us-east-1"
+echo "  Tenant:"
+echo "    Email: tenant@pg.com"
+echo "    Password: Tenant@123"
 echo ""
-echo "✅ Applications Deployed:"
-echo "   • Admin Portal: 37 pages (LIVE)"
-echo "   • Tenant Portal: 28 pages (LIVE)"
-echo "   • Backend API: Running on port 8080"
-echo "   • Total Pages: 65 pages fully functional"
-echo ""
-echo "✅ Web Server:"
-echo "   • Nginx: Configured and running"
-echo "   • SSL/TLS: Ready for certificate"
-echo "   • Caching: Optimized"
-echo ""
-echo -e "${BLUE}🌐 ACCESS URLS:${NC}"
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo ""
-echo "🏢 ADMIN PORTAL:"
-echo "   URL:      http://$EC2_HOST/admin"
-echo "   Login:    admin@pgni.com"
-echo "   Password: password123"
-echo ""
-echo "🏠 TENANT PORTAL:"
-echo "   URL:      http://$EC2_HOST/tenant"
-echo "   Login:    tenant@pgni.com"
-echo "   Password: password123"
-echo ""
-echo "🔌 API ENDPOINT:"
-echo "   URL:      http://$EC2_HOST:8080"
-echo "   Health:   http://$EC2_HOST:8080/health"
-echo ""
-echo -e "${BLUE}📱 MOBILE TESTING:${NC}"
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo ""
-echo "Option 1: Browser (Any Device)"
-echo "  → Open: http://$EC2_HOST/admin"
-echo "  → Works on: iPhone, Android, iPad, Tablet"
-echo "  → No installation required"
-echo ""
-echo "Option 2: Native Android App (Future)"
-echo "  → Build APK: See BUILD_ANDROID_APPS.bat"
-echo "  → Requires: Flutter SDK on Windows"
-echo "  → Benefits: Offline mode, better performance"
-echo ""
-echo -e "${BLUE}💻 LAPTOP TESTING:${NC}"
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo ""
-echo "1. Open any browser (Chrome, Edge, Firefox, Safari)"
-echo "2. Navigate to: http://$EC2_HOST/admin"
-echo "3. Login with credentials above"
-echo "4. Test all 37 admin pages"
-echo "5. Test all 28 tenant pages"
-echo ""
-echo -e "${BLUE}🧪 TEST SCENARIOS:${NC}"
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo ""
-echo "Admin User Testing:"
-echo "  ✓ Create new property"
-echo "  ✓ Add rooms to property"
-echo "  ✓ Register tenants"
-echo "  ✓ Generate bills"
-echo "  ✓ Record payments"
-echo "  ✓ View reports and analytics"
-echo "  ✓ Manage settings"
-echo ""
-echo "Tenant User Testing:"
-echo "  ✓ View dashboard"
-echo "  ✓ Check notices"
-echo "  ✓ View rent details"
-echo "  ✓ Submit issues/complaints"
-echo "  ✓ View food menu"
-echo "  ✓ Access services"
-echo "  ✓ Update profile"
-echo ""
-echo -e "${BLUE}📝 NEXT STEPS:${NC}"
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo ""
-echo "1. ✅ Test application on your laptop"
-echo "2. ✅ Test on mobile devices (any browser)"
-echo "3. ✅ Create test data (properties, rooms, tenants)"
-echo "4. ✅ Test all user workflows"
-echo "5. 📱 Build native mobile apps (optional)"
-echo "6. 🔒 Set up SSL certificate (optional)"
-echo "7. 🌐 Configure custom domain (optional)"
-echo ""
-echo -e "${GREEN}================================================================${NC}"
-echo -e "${GREEN}   YOUR FULL APPLICATION IS NOW LIVE AND READY FOR TESTING!${NC}"
-echo -e "${GREEN}================================================================${NC}"
-echo ""
-
+echo "Deployment completed at: $(date)"
+echo "=============================================="
