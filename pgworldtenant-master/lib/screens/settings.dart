@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../utils/api.dart';
 
 import 'package:modal_progress_hud_nsn/modal_progress_hud_nsn.dart';
-import 'dart:io' show Platform;
 
 import '../utils/utils.dart';
 import '../utils/config.dart';

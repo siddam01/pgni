@@ -168,7 +168,7 @@ class LoginState extends State<Login> {
           'oneSignalID': onesignalUserId,
         }));
         employeeResponse.then((response) {
-          if (response.meta == null || response.meta.status != "200") {
+          if (response.meta.status != "200") {
             setState(() {
               loggedIn = false;
             });

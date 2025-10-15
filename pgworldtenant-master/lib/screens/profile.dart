@@ -9,7 +9,6 @@ import '../utils/models.dart';
 import '../utils/utils.dart';
 import './editProfile.dart';
 import './documents.dart';
-import './photo.dart';
 
 class ProfileActivity extends StatefulWidget {
   @override

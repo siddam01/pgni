@@ -69,23 +69,13 @@ class BillActivityState extends State<BillActivity> {
     amount.text = user.rent;
     paidDate.text = headingDateFormat.format(new DateTime.now());
     pickedPaidDate = dateFormat.format(new DateTime.now());
-    if (bill.document != null) {
-      fileNames = bill.document.split(",");
-    }
-    if (bill.type != null) {
-      selectedType = bill.type;
-      type.text = getBillType(bill.type);
-    }
-    if (bill.payment != null) {
-      selectedPayment = bill.payment;
-      payment.text = getPaymentType(bill.payment);
-    }
-    if (bill.transactionID != null) {
-      transactionID.text = bill.transactionID;
-    }
-    if (bill.billID != null) {
-      billID.text = bill.billID;
-    }
+    fileNames = bill.document.split(",");
+    selectedType = bill.type;
+    type.text = getBillType(bill.type);
+    selectedPayment = bill.payment;
+    payment.text = getPaymentType(bill.payment);
+    transactionID.text = bill.transactionID;
+    billID.text = bill.billID;
     amount.text = bill.amount;
     paidDate.text = headingDateFormat.format(DateTime.parse(bill.paidDateTime));
     pickedPaidDate = dateFormat.format(DateTime.parse(bill.paidDateTime));
