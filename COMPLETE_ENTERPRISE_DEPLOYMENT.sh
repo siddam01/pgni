@@ -11,7 +11,7 @@ EC2_IP="34.227.111.143"
 EC2_USER="ec2-user"
 SSH_KEY="cloudshell-key.pem"
 REGION="us-east-1"
-INSTANCE_ID="i-0909d462845deb151"
+INSTANCE_ID=""  # Will be auto-detected
 
 # Color codes for output
 RED='\033[0;31m'
@@ -50,8 +50,29 @@ if [ ! -f "$SSH_KEY" ]; then
     log_success "SSH key downloaded"
 fi
 
+# Auto-detect EC2 instance ID by IP address
+log_info "Finding EC2 instance by IP address ($EC2_IP)..."
+INSTANCE_ID=$(aws ec2 describe-instances \
+    --region "$REGION" \
+    --filters "Name=ip-address,Values=$EC2_IP" "Name=instance-state-name,Values=running" \
+    --query 'Reservations[0].Instances[0].InstanceId' \
+    --output text 2>/dev/null)
+
+if [ "$INSTANCE_ID" = "None" ] || [ -z "$INSTANCE_ID" ]; then
+    log_error "Cannot find running EC2 instance with IP $EC2_IP"
+    log_info "Searching for any running instances..."
+    aws ec2 describe-instances \
+        --region "$REGION" \
+        --filters "Name=instance-state-name,Values=running" \
+        --query 'Reservations[*].Instances[*].[InstanceId,PublicIpAddress,Tags[?Key==`Name`].Value|[0]]' \
+        --output table
+    exit 1
+fi
+
+log_success "Found EC2 instance: $INSTANCE_ID"
+
 # Check EC2 instance status
-log_info "Checking EC2 instance status..."
+log_info "Verifying EC2 instance status..."
 INSTANCE_STATE=$(aws ec2 describe-instances --instance-ids "$INSTANCE_ID" --region "$REGION" --query 'Reservations[0].Instances[0].State.Name' --output text 2>/dev/null || echo "unknown")
 
 if [ "$INSTANCE_STATE" != "running" ]; then
