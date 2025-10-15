@@ -1,0 +1,139 @@
+================================================================================
+  FINAL DEPLOYMENT - COPY & PASTE THIS INTO AWS CLOUDSHELL
+================================================================================
+
+📋 STEP 1: Navigate to home directory
+────────────────────────────────────────────────────────────────────────────
+cd ~
+
+📋 STEP 2: Download deployment script
+────────────────────────────────────────────────────────────────────────────
+curl -O https://raw.githubusercontent.com/siddam01/pgni/main/COMPLETE_ENTERPRISE_DEPLOYMENT.sh
+chmod +x COMPLETE_ENTERPRISE_DEPLOYMENT.sh
+
+📋 STEP 3: Get SSH key
+────────────────────────────────────────────────────────────────────────────
+curl -O https://raw.githubusercontent.com/siddam01/pgni/main/terraform/ssh-key.txt
+mv ssh-key.txt cloudshell-key.pem
+chmod 600 cloudshell-key.pem
+
+📋 STEP 4: Run deployment (takes ~15-20 minutes)
+────────────────────────────────────────────────────────────────────────────
+./COMPLETE_ENTERPRISE_DEPLOYMENT.sh
+
+================================================================================
+  WHAT THIS DOES:
+================================================================================
+
+✅ Phase 1: Infrastructure Validation & Expansion (~2 min)
+   - Checks EC2 instance status
+   - Expands disk to 100GB if needed
+   - Verifies network connectivity
+
+✅ Phase 2: Installing Prerequisites on EC2 (~10 min)
+   - Updates system packages
+   - Installs Nginx, Git, development tools
+   - Downloads Flutter SDK
+   - Runs Flutter doctor
+
+✅ Phase 3: Building Flutter Applications (~5 min)
+   - Clones source code from GitHub
+   - Configures API URLs
+   - Builds Admin App (Flutter Web)
+   - Builds Tenant App (Flutter Web)
+
+✅ Phase 4: Deploying Frontend to Nginx (~1 min)
+   - Creates web directories
+   - Deploys Admin and Tenant apps
+   - Sets proper permissions
+
+✅ Phase 5: Configuring Nginx (~1 min)
+   - Creates Nginx configuration
+   - Sets up routing (/admin/, /tenant/, /api/)
+   - Configures CORS
+   - Starts Nginx service
+
+✅ Phase 6: Validation & Health Checks (~1 min)
+   - Tests Backend API (port 8080)
+   - Tests Admin Portal (port 80)
+   - Tests Tenant Portal (port 80)
+   - Verifies all services
+
+================================================================================
+  AFTER DEPLOYMENT COMPLETES:
+================================================================================
+
+🌐 Access URLs:
+────────────────────────────────────────────────────────────────────────────
+   Admin Portal:  http://34.227.111.143/admin/
+   Tenant Portal: http://34.227.111.143/tenant/
+   Backend API:   http://34.227.111.143:8080/health
+
+🔐 Test Accounts:
+────────────────────────────────────────────────────────────────────────────
+   Super Admin:
+     Email: admin@pgworld.com
+     Password: Admin@123
+
+   PG Owner:
+     Email: owner@pg.com
+     Password: Owner@123
+
+   Tenant:
+     Email: tenant@pg.com
+     Password: Tenant@123
+
+📖 Full Documentation:
+────────────────────────────────────────────────────────────────────────────
+   See DEPLOYMENT_GUIDE.md for:
+   - Detailed troubleshooting
+   - Architecture diagrams
+   - Maintenance procedures
+   - Next steps (HTTPS, monitoring, mobile apps)
+
+================================================================================
+  TROUBLESHOOTING:
+================================================================================
+
+❌ If deployment fails at any phase:
+   1. Read the error message carefully
+   2. Check DEPLOYMENT_GUIDE.md for specific troubleshooting
+   3. SSH to EC2 to investigate: ssh -i cloudshell-key.pem ec2-user@34.227.111.143
+
+❌ If "No space left on device":
+   - The script auto-expands disk to 100GB
+   - If still failing, manually run: aws ec2 modify-volume --volume-id vol-xxx --size 100
+
+❌ If Flutter download is slow:
+   - This is normal! Flutter SDK is ~1GB
+   - Wait patiently, it will complete
+
+❌ If SSH connection fails:
+   - Verify EC2 instance is running in AWS Console
+   - Check Security Group allows SSH (port 22)
+   - Try EC2 Instance Connect from AWS Console
+
+================================================================================
+  VALIDATION COMMANDS (after deployment):
+================================================================================
+
+# Test Backend API
+curl http://34.227.111.143:8080/health
+
+# Test Admin Portal (should return HTML)
+curl -I http://34.227.111.143/admin/
+
+# Test Tenant Portal (should return HTML)
+curl -I http://34.227.111.143/tenant/
+
+# SSH to EC2 and check services
+ssh -i cloudshell-key.pem ec2-user@34.227.111.143
+sudo systemctl status pgworld-api
+sudo systemctl status nginx
+df -h
+exit
+
+================================================================================
+  READY TO DEPLOY? COPY STEPS 1-4 ABOVE INTO CLOUDSHELL NOW!
+================================================================================
+
