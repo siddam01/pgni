@@ -11,7 +11,7 @@ EC2_IP="34.227.111.143"
 EC2_USER="ec2-user"
 SSH_KEY="cloudshell-key.pem"
 REGION="us-east-1"
-INSTANCE_ID="i-0b5f620584d1e4ee9"
+INSTANCE_ID="i-0909d462845deb151"
 
 # Color codes for output
 RED='\033[0;31m'

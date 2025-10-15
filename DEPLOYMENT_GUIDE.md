@@ -347,7 +347,7 @@ ssh: connect to host 34.227.111.143 port 22: Connection refused
 **Solution:**
 ```bash
 # Check EC2 instance status in AWS Console
-aws ec2 describe-instances --instance-ids i-0b5f620584d1e4ee9 --region us-east-1
+aws ec2 describe-instances --instance-ids i-0909d462845deb151 --region us-east-1
 
 # Check Security Group allows SSH (port 22)
 aws ec2 describe-security-groups --region us-east-1 | grep -A 10 "22"
