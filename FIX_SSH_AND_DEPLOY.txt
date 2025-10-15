@@ -1,0 +1,228 @@
+================================================================================
+  FIX SSH KEY AND DEPLOY
+================================================================================
+
+The SSH key format is corrupted. Let's fix it and deploy.
+
+================================================================================
+  SOLUTION: Use AWS Systems Manager (No SSH Key Needed!)
+================================================================================
+
+Since the SSH key is having issues, let's use AWS Systems Manager Session Manager
+instead. This connects directly to EC2 without needing SSH keys!
+
+STEP 1: Run these commands in CloudShell
+────────────────────────────────────────────────────────────────────────────
+
+# Set variables
+export EC2_IP="34.227.111.143"
+export INSTANCE_ID="i-0909d462845deb151"
+export REGION="us-east-1"
+
+# Install prerequisites on EC2 via SSM
+aws ssm send-command \
+    --instance-ids "$INSTANCE_ID" \
+    --region "$REGION" \
+    --document-name "AWS-RunShellScript" \
+    --comment "Install prerequisites" \
+    --parameters 'commands=[
+        "sudo yum update -y",
+        "sudo yum install -y git wget curl unzip nginx",
+        "echo Prerequisites installed"
+    ]' \
+    --output text
+
+echo "Waiting 30 seconds for installation..."
+sleep 30
+
+# Check if Flutter is already installed
+aws ssm send-command \
+    --instance-ids "$INSTANCE_ID" \
+    --region "$REGION" \
+    --document-name "AWS-RunShellScript" \
+    --comment "Check Flutter" \
+    --parameters 'commands=[
+        "if [ -d /home/ec2-user/flutter ]; then echo Flutter already installed; else echo Flutter not found; fi",
+        "df -h /"
+    ]' \
+    --output text
+
+echo "Waiting 10 seconds..."
+sleep 10
+
+================================================================================
+  STEP 2: Install Flutter and Build Apps
+================================================================================
+
+# Install Flutter SDK (if needed)
+aws ssm send-command \
+    --instance-ids "$INSTANCE_ID" \
+    --region "$REGION" \
+    --document-name "AWS-RunShellScript" \
+    --comment "Install Flutter" \
+    --parameters 'commands=[
+        "cd /home/ec2-user",
+        "if [ ! -d flutter ]; then",
+        "  echo Downloading Flutter SDK...",
+        "  wget -q https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_3.16.0-stable.tar.xz",
+        "  echo Extracting Flutter...",
+        "  tar xf flutter_linux_3.16.0-stable.tar.xz",
+        "  rm -f flutter_linux_3.16.0-stable.tar.xz",
+        "  echo Flutter installed",
+        "fi",
+        "export PATH=$PATH:/home/ec2-user/flutter/bin",
+        "flutter --version"
+    ]' \
+    --timeout-seconds 600 \
+    --output text
+
+echo "Flutter installation started (this takes 5-10 minutes)..."
+echo "Waiting 10 minutes for Flutter to complete..."
+sleep 600
+
+================================================================================
+  STEP 3: Clone Code and Build Apps
+================================================================================
+
+# Clone repository and build
+aws ssm send-command \
+    --instance-ids "$INSTANCE_ID" \
+    --region "$REGION" \
+    --document-name "AWS-RunShellScript" \
+    --comment "Build Flutter apps" \
+    --parameters 'commands=[
+        "export PATH=$PATH:/home/ec2-user/flutter/bin",
+        "cd /home/ec2-user",
+        "if [ -d pgni ]; then cd pgni && git pull; else git clone https://github.com/siddam01/pgni.git && cd pgni; fi",
+        "echo Building Admin App...",
+        "cd /home/ec2-user/pgni/pgworld-master",
+        "sed -i \"s|static const URL = .*|static const URL = \\\"34.227.111.143:8080\\\";|\" lib/utils/config.dart",
+        "flutter clean || true",
+        "flutter pub get",
+        "flutter build web --release",
+        "echo Building Tenant App...",
+        "cd /home/ec2-user/pgni/pgworldtenant-master",
+        "sed -i \"s|static const URL = .*|static const URL = \\\"34.227.111.143:8080\\\";|\" lib/utils/config.dart",
+        "flutter clean || true",
+        "flutter pub get",
+        "flutter build web --release",
+        "echo Build complete"
+    ]' \
+    --timeout-seconds 900 \
+    --output text
+
+echo "Building apps (this takes 5-10 minutes)..."
+echo "Waiting 10 minutes for build to complete..."
+sleep 600
+
+================================================================================
+  STEP 4: Deploy to Nginx
+================================================================================
+
+# Deploy and configure Nginx
+aws ssm send-command \
+    --instance-ids "$INSTANCE_ID" \
+    --region "$REGION" \
+    --document-name "AWS-RunShellScript" \
+    --comment "Deploy to Nginx" \
+    --parameters 'commands=[
+        "echo Deploying to Nginx...",
+        "sudo mkdir -p /usr/share/nginx/html/admin",
+        "sudo mkdir -p /usr/share/nginx/html/tenant",
+        "sudo rm -rf /usr/share/nginx/html/admin/*",
+        "sudo rm -rf /usr/share/nginx/html/tenant/*",
+        "sudo cp -r /home/ec2-user/pgni/pgworld-master/build/web/* /usr/share/nginx/html/admin/",
+        "sudo cp -r /home/ec2-user/pgni/pgworldtenant-master/build/web/* /usr/share/nginx/html/tenant/",
+        "sudo chown -R nginx:nginx /usr/share/nginx/html",
+        "sudo chmod -R 755 /usr/share/nginx/html",
+        "echo Creating Nginx config...",
+        "sudo tee /etc/nginx/conf.d/pgni.conf > /dev/null << EOF",
+        "server {",
+        "    listen 80;",
+        "    server_name _;",
+        "    location = / { return 301 /admin/; }",
+        "    location /admin/ {",
+        "        alias /usr/share/nginx/html/admin/;",
+        "        try_files \\$uri \\$uri/ /admin/index.html;",
+        "        add_header Access-Control-Allow-Origin * always;",
+        "    }",
+        "    location /tenant/ {",
+        "        alias /usr/share/nginx/html/tenant/;",
+        "        try_files \\$uri \\$uri/ /tenant/index.html;",
+        "        add_header Access-Control-Allow-Origin * always;",
+        "    }",
+        "    location /api/ {",
+        "        proxy_pass http://localhost:8080/;",
+        "        proxy_set_header Host \\$host;",
+        "        proxy_set_header X-Real-IP \\$remote_addr;",
+        "    }",
+        "    location /health {",
+        "        proxy_pass http://localhost:8080/health;",
+        "    }",
+        "}",
+        "EOF",
+        "sudo nginx -t",
+        "sudo systemctl enable nginx",
+        "sudo systemctl restart nginx",
+        "echo Deployment complete!"
+    ]' \
+    --output text
+
+echo "Deploying to Nginx..."
+sleep 30
+
+================================================================================
+  STEP 5: Validate Deployment
+================================================================================
+
+# Test the deployment
+echo ""
+echo "Testing deployment..."
+echo ""
+
+# Test API
+echo "Testing Backend API..."
+curl -s http://34.227.111.143:8080/health && echo "" || echo "API not responding"
+
+# Test Admin Portal
+echo ""
+echo "Testing Admin Portal..."
+curl -I http://34.227.111.143/admin/ 2>/dev/null | head -1
+
+# Test Tenant Portal
+echo ""
+echo "Testing Tenant Portal..."
+curl -I http://34.227.111.143/tenant/ 2>/dev/null | head -1
+
+echo ""
+echo "=============================================="
+echo "  DEPLOYMENT COMPLETE!"
+echo "=============================================="
+echo ""
+echo "Access your application:"
+echo "  Admin Portal:  http://34.227.111.143/admin/"
+echo "  Tenant Portal: http://34.227.111.143/tenant/"
+echo "  Backend API:   http://34.227.111.143:8080/health"
+echo ""
+echo "Test Accounts:"
+echo "  Admin: admin@pgworld.com / Admin@123"
+echo "  Owner: owner@pg.com / Owner@123"
+echo "  Tenant: tenant@pg.com / Tenant@123"
+echo ""
+
+================================================================================
+  NOTE: This uses AWS Systems Manager instead of SSH
+================================================================================
+
+Advantages:
+✅ No SSH key needed
+✅ Works even with SSH key issues
+✅ Runs commands directly on EC2
+✅ All logs stored in SSM
+
+To view command results:
+1. Go to AWS Console > Systems Manager > Run Command
+2. Click on Command ID to see output
+
+================================================================================
+
