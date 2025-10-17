@@ -459,7 +459,7 @@ EOF
     
     # Determine optimal build flags
     # Note: Flutter 3.19+ removed --web-renderer flag (auto-detects now)
-    # Flutter 3.35+ uses wasm by default
+    # Note: Flutter 3.35+ auto-detects wasm vs JS (no flag needed)
     
     if [ "$TOTAL_RAM_MB" -ge 8000 ]; then
         BUILD_FLAGS="--release --no-source-maps --dart-define=dart.vm.product=true"
