@@ -604,7 +604,7 @@ server {
         }
         
         # Don't cache HTML
-        location ~* \.(html)$ {
+        location ~* \.html$ {
             add_header Cache-Control "no-cache, no-store, must-revalidate";
             add_header Pragma "no-cache";
             add_header Expires "0";
@@ -623,7 +623,7 @@ server {
             access_log off;
         }
         
-        location ~* \.(html)$ {
+        location ~* \.html$ {
             add_header Cache-Control "no-cache, no-store, must-revalidate";
             add_header Pragma "no-cache";
             add_header Expires "0";
