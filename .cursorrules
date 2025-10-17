@@ -166,8 +166,16 @@ Cache: /home/ec2-user/.pub-cache, ~/.flutter, .dart_tool
 
 ---
 
-## 🎬 One-Liner Deployment
+## 🎬 Deployment Commands
 
+### Complete Infrastructure-Aware Deployment (RECOMMENDED):
+```bash
+cd /home/ec2-user && curl -O https://raw.githubusercontent.com/siddam01/pgni/main/deploy_pgni_complete.sh && chmod +x deploy_pgni_complete.sh && ./deploy_pgni_complete.sh
+```
+
+This script handles: infrastructure validation, health checks, auto-swap creation, intelligent builds, deployment, comprehensive validation, performance logging.
+
+### Standard Deployment (Fast):
 ```bash
 cd /home/ec2-user && curl -O https://raw.githubusercontent.com/siddam01/pgni/main/deploy_pgni_web.sh && chmod +x deploy_pgni_web.sh && ./deploy_pgni_web.sh
 ```
