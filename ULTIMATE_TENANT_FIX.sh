@@ -58,8 +58,8 @@ class API {
 // GLOBAL CONSTANTS (Accessible everywhere)
 // ══════════════════════════════════════════════════════════════════════════
 
-const String APIKEY = "YOUR_API_KEY";
-const String ONESIGNAL_APP_ID = "YOUR_ONESIGNAL_APP_ID";
+const String APIKEY = "mrk-1b96d9eeccf649e695ed6ac2b13cb619";
+const String ONESIGNAL_APP_ID = "AKIA2FFQRNMAP3IDZD6V";
 const int STATUS_403 = 403;
 const String defaultOffset = "0";
 const String defaultLimit = "10";
