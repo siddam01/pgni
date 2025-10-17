@@ -567,7 +567,7 @@ deploy_to_nginx() {
     subsection "4.3 Nginx Configuration"
     
     # Create optimized Nginx config
-    sudo bash -c 'cat > /etc/nginx/conf.d/pgni.conf << "NGINXEOF"
+    cat > /tmp/pgni_nginx.conf << 'NGINXEOF'
 server {
     listen 80 default_server;
     server_name _;
@@ -639,7 +639,10 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 }
-NGINXEOF'
+NGINXEOF
+    
+    # Move config to Nginx directory
+    sudo mv /tmp/pgni_nginx.conf /etc/nginx/conf.d/pgni.conf
     
     # Remove default config
     sudo rm -f /etc/nginx/conf.d/default.conf
