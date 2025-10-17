@@ -36,19 +36,22 @@ pgworld-master/
 
 ## 🔧 Deployment
 
-### **Full Deployment (Recommended)**
+### **Full Deployment - Both Apps (Recommended)**
 
-Run this on your EC2 instance:
+Run this on your EC2 instance to fix blank screens and deploy both apps:
 
 ```bash
-bash <(curl -sL https://raw.githubusercontent.com/siddam01/pgni/main/FIX_WITH_MANUAL_IP.sh)
+bash <(curl -sL https://raw.githubusercontent.com/siddam01/pgni/main/FIX_BOTH_APPS.sh)
 ```
 
 This will:
-- ✅ Configure Flutter app with correct IP
-- ✅ Build Admin app
-- ✅ Deploy to Nginx
+- ✅ Configure both Admin & Tenant apps with correct IP
+- ✅ Build both apps with proper base-href
+- ✅ Deploy to Nginx at /admin/ and /tenant/
+- ✅ Fix blank screen issues
 - ✅ Verify all services
+
+**⏱️ Time: 6-8 minutes (parallel builds)**
 
 ---
 
@@ -57,6 +60,7 @@ This will:
 | Application | URL | Purpose |
 |-------------|-----|---------|
 | **Admin Portal** | http://13.221.117.236/admin/ | Main admin dashboard |
+| **Tenant Portal** | http://13.221.117.236/tenant/ | Tenant application |
 | **Backend API** | http://13.221.117.236:8080/ | REST API |
 
 ---
@@ -173,12 +177,13 @@ Proprietary - All rights reserved
 
 ## 🎯 Next Steps
 
-1. ✅ **Test the application:** http://13.221.117.236/admin/
-2. ✅ **Login with admin credentials**
-3. ⏳ **Set up SSL certificate** (for HTTPS)
-4. ⏳ **Configure custom domain**
-5. ⏳ **Set up automated backups**
-6. ⏳ **Deploy Tenant app** (after fixing null safety issues)
+1. ✅ **Test Admin app:** http://13.221.117.236/admin/
+2. ✅ **Test Tenant app:** http://13.221.117.236/tenant/
+3. ✅ **Login with test credentials**
+4. ⏳ **Set up SSL certificate** (for HTTPS)
+5. ⏳ **Configure custom domain**
+6. ⏳ **Set up automated backups**
+7. ⏳ **Configure production database**
 
 ---
 
