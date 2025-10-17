@@ -206,7 +206,7 @@ EOF
     
     # Add wasm flag (Flutter 3.35+)
     if [ "$USE_WASM" = false ]; then
-        BUILD_FLAGS="$BUILD_FLAGS --wasm=false"
+        BUILD_FLAGS="$BUILD_FLAGS --no-wasm"
         log "Optimization: Using JS output (40% faster compilation)"
     fi
     

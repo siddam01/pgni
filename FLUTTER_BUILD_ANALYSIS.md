@@ -179,7 +179,8 @@ Total:        18 min  ─┘ (some shared resource contention)
 **Solution:**
 ```bash
 # Force JS output (faster compile, slightly slower runtime)
-flutter build web --wasm=false --release
+# Flutter 3.35+: Use --no-wasm (boolean flag, no value)
+flutter build web --no-wasm --release
 ```
 
 **Trade-off:**
