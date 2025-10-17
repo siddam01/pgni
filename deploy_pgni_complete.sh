@@ -458,18 +458,20 @@ EOF
     subsection "Compilation"
     
     # Determine optimal build flags
+    # Note: Flutter 3.19+ removed --web-renderer flag (auto-detects now)
+    # Flutter 3.35+ uses wasm by default
+    
     if [ "$TOTAL_RAM_MB" -ge 8000 ]; then
-        BUILD_RENDERER="canvaskit"
-        BUILD_FLAGS="--release --web-renderer canvaskit --no-source-maps --dart-define=dart.vm.product=true"
+        BUILD_FLAGS="--release --no-source-maps --dart-define=dart.vm.product=true"
+        log "Build mode: Optimal (full optimization)"
     elif [ "$TOTAL_RAM_MB" -ge 4000 ]; then
-        BUILD_RENDERER="canvaskit"
-        BUILD_FLAGS="--release --web-renderer canvaskit --no-source-maps --no-tree-shake-icons --dart-define=dart.vm.product=true"
+        BUILD_FLAGS="--release --no-source-maps --no-tree-shake-icons --dart-define=dart.vm.product=true"
+        log "Build mode: Standard (with icon preservation)"
     else
-        BUILD_RENDERER="html"
-        BUILD_FLAGS="--release --web-renderer html --no-source-maps --no-tree-shake-icons --dart-define=dart.vm.product=true"
+        BUILD_FLAGS="--release --no-source-maps --no-tree-shake-icons --dart-define=dart.vm.product=true"
+        log "Build mode: Conservative (memory-safe)"
     fi
     
-    log "Build renderer: $BUILD_RENDERER"
     log "Build flags: $BUILD_FLAGS"
     
     # Build with timing

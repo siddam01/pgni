@@ -45,14 +45,16 @@ Cache .pub-cache and .dart_tool between builds.
 
 ### 1. Optimized Build Commands
 
+Note: Flutter 3.19+ removed --web-renderer flag (auto-detects renderer now)
+
 Standard (≥4GB RAM):
 ```bash
-flutter build web --release --web-renderer canvaskit --no-source-maps --no-tree-shake-icons --dart-define=dart.vm.product=true
+flutter build web --release --no-source-maps --dart-define=dart.vm.product=true
 ```
 
 Memory-constrained (<4GB RAM):
 ```bash
-flutter build web --release --web-renderer html --no-source-maps --no-tree-shake-icons --dart-define=dart.vm.product=true
+flutter build web --release --no-source-maps --no-tree-shake-icons --dart-define=dart.vm.product=true
 ```
 
 ### 2. Avoid Full Clean Builds
