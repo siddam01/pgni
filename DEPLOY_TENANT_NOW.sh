@@ -62,8 +62,8 @@ class API {
 
 // Note: These keys can be updated without rebuilding the entire app
 // Just edit this file and run: flutter build web --release
-const String APIKEY = "pgworld-api-key-2024";
-const String ONESIGNAL_APP_ID = "disabled"; // Not needed for web app
+const String APIKEY = "mrk-1b96d9eeccf649e695ed6ac2b13cb619";
+const String ONESIGNAL_APP_ID = "AKIA2FFQRNMAP3IDZD6V";
 
 const int STATUS_403 = 403;
 const String defaultOffset = "0";
