@@ -237,7 +237,7 @@ CREATE TABLE IF NOT EXISTS issues (
     id VARCHAR(36) PRIMARY KEY,
     hostelID VARCHAR(36),
     log TEXT,
-    by VARCHAR(36),
+    \`by\` VARCHAR(36),
     type VARCHAR(100),
     status VARCHAR(20) DEFAULT 'open',
     createdBy VARCHAR(36),
