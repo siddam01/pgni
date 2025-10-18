@@ -24,7 +24,7 @@ cat > lib/config.dart << 'EOFCONFIG'
 import 'package:flutter/foundation.dart';
 
 class API {
-  static const String URL = "13.221.117.236:8080";
+  static const String URL = "54.227.101.30:8080";
   static const String SEND_OTP = "/api/send-otp";
   static const String VERIFY_OTP = "/api/verify-otp";
   static const String BILL = "/api/bills";
@@ -59,7 +59,7 @@ class Config {
 const int STATUS_403 = 403;
 const String defaultOffset = "0";
 const String defaultLimit = "10";
-const String mediaURL = "http://13.221.117.236:8080/uploads/";
+const String mediaURL = "http://54.227.101.30:8080/uploads/";
 const int timeout = 30;
 
 Map<String, String> headers = {'Content-Type': 'application/json', 'Accept': 'application/json', 'X-API-Key': APIKEY_VALUE, 'apikey': APIKEY_VALUE};
@@ -380,7 +380,7 @@ if [ -f "build/web/main.dart.js" ]; then
     echo "════════════════════════════════════════════════════════"
     echo "✅ SUCCESS!"
     echo "════════════════════════════════════════════════════════"
-    echo "🌐 http://13.221.117.236/tenant/ | HTTP $STATUS | ${BUILD_TIME}s | $SIZE"
+    echo "🌐 http://54.227.101.30/tenant/ | HTTP $STATUS | ${BUILD_TIME}s | $SIZE"
     echo "Login: priya@example.com / Tenant@123"
 else
     echo "❌ Build failed"
