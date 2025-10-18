@@ -2,7 +2,7 @@
 
 [![Flutter](https://img.shields.io/badge/Flutter-3.35%2B-blue)](https://flutter.dev)
 [![Null Safety](https://img.shields.io/badge/null--safety-enabled-brightgreen)](https://dart.dev/null-safety)
-[![Production](https://img.shields.io/badge/status-production--ready-success)](http://13.221.117.236/tenant/)
+[![Production](https://img.shields.io/badge/status-production--ready-success)](http://54.227.101.30/tenant/)
 
 **Production-grade Paying Guest (PG) Management System** with modern architecture, full null-safety, and clean code structure.
 
@@ -25,14 +25,14 @@ bash <(curl -sL https://raw.githubusercontent.com/siddam01/pgni/main/PRODUCTION_
 
 ### **Tenant Portal:**
 ```
-🌐 URL:      http://13.221.117.236/tenant/
+🌐 URL:      http://54.227.101.30/tenant/
 📧 Email:    priya@example.com
 🔐 Password: Tenant@123
 ```
 
 ### **Admin Portal:**
 ```
-🌐 URL:      http://13.221.117.236/admin/
+🌐 URL:      http://54.227.101.30/admin/
 📧 Email:    admin@pgworld.com
 🔐 Password: Admin@123
 ```
@@ -219,7 +219,7 @@ dependencies:
 
 After successful deployment:
 
-1. **Access the app:** http://13.221.117.236/tenant/
+1. **Access the app:** http://54.227.101.30/tenant/
 2. **Login** with provided credentials
 3. **Test features:** Dashboard, profile, settings
 4. **Monitor:** Check Nginx logs if issues occur
@@ -277,4 +277,4 @@ For issues or questions:
 
 **🎉 Ready for Production!**
 
-The application is fully built, tested, and deployed. Access it now at http://13.221.117.236/tenant/
+The application is fully built, tested, and deployed. Access it now at http://54.227.101.30/tenant/
