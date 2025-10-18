@@ -10,18 +10,26 @@
 
 ## 🚀 ONE-COMMAND DEPLOYMENT
 
-### **🔧 Master Fix (Updates IPs + API Endpoints + Rebuild):**
+### **🏗️ RECOMMENDED: Production Architecture (Nginx Proxy):**
+```bash
+bash <(curl -sL https://raw.githubusercontent.com/siddam01/pgni/main/SETUP_NGINX_PROXY.sh)
+```
+**✅ Solves CORS issues forever!**  
+**✅ Production-ready reverse proxy**  
+**✅ Domain & HTTPS ready**
+
+### **🔧 Alternative: Master Fix (Updates IPs + API Endpoints):**
 ```bash
 bash <(curl -sL https://raw.githubusercontent.com/siddam01/pgni/main/MASTER_FIX_ALL_ISSUES.sh)
 ```
 *Use this if you're seeing old IP or 404 errors*
 
-### **🎯 Deploy Production Build (Clean Install):**
+### **🎯 Alternative: Clean Install:**
 ```bash
 bash <(curl -sL https://raw.githubusercontent.com/siddam01/pgni/main/PRODUCTION_DEPLOY.sh)
 ```
 
-**⏱️ Deploy Time:** 3-5 minutes  
+**⏱️ Deploy Time:** 2-5 minutes  
 **📊 Status:** ✅ Production Ready  
 **🎯 Target:** Flutter 3.35+ | Null-Safe | Clean Architecture
 
