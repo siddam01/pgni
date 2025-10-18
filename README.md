@@ -10,7 +10,13 @@
 
 ## 🚀 ONE-COMMAND DEPLOYMENT
 
-### **Deploy Production Build:**
+### **🔧 Master Fix (Updates IPs + API Endpoints + Rebuild):**
+```bash
+bash <(curl -sL https://raw.githubusercontent.com/siddam01/pgni/main/MASTER_FIX_ALL_ISSUES.sh)
+```
+*Use this if you're seeing old IP or 404 errors*
+
+### **🎯 Deploy Production Build (Clean Install):**
 ```bash
 bash <(curl -sL https://raw.githubusercontent.com/siddam01/pgni/main/PRODUCTION_DEPLOY.sh)
 ```
