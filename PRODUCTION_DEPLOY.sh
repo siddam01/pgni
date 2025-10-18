@@ -74,7 +74,7 @@ cat > lib/config/app_config.dart << 'EOFCONFIG'
 /// Production Configuration
 class AppConfig {
   static const bool isProduction = true;
-  static const String apiBaseUrl = "http://13.221.117.236:8080";
+  static const String apiBaseUrl = "http://54.227.101.30:8080";
   static const String apiKey = "mrk-1b96d9eeccf649e695ed6ac2b13cb619";
   static const String oneSignalAppId = "AKIA2FFQRNMAP3IDZD6V";
   static const int requestTimeout = 30;
@@ -727,7 +727,7 @@ echo "════════════════════════�
 echo "✅ PRODUCTION-READY BUILD SUCCESSFUL!"
 echo "════════════════════════════════════════════════════════"
 echo ""
-echo "🌐 URL:      http://13.221.117.236/tenant/"
+echo "🌐 URL:      http://54.227.101.30/tenant/"
 echo "📧 Email:    priya@example.com"
 echo "🔐 Password: Tenant@123"
 echo "📊 Status:   HTTP $STATUS"
