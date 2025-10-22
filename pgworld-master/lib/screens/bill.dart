@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:cloudpg/screens/pro.dart';
 import 'package:flutter/material.dart';
 
@@ -45,8 +47,8 @@ class BillActivityState extends State<BillActivity> {
   bool advance;
 
   bool loading = false;
-  List<String> fileNames = new List();
-  List<Widget> fileWidgets = new List();
+  List<String> fileNames = [];
+  List<Widget> fileWidgets = [];
 
   BillActivityState(this.bill, this.user, this.employee, this.advance);
 
@@ -83,13 +85,13 @@ class BillActivityState extends State<BillActivity> {
   }
 
   Future getImage(ImageSource source) async {
-    var image = await ImagePicker.pickImage(source: source);
+    var image = await ImagePicker().pickImage(source: source);
 
     if (image != null) {
       setState(() {
         loading = true;
       });
-      Future<String> uploadResponse = upload(image);
+      Future<String> uploadResponse = upload(File(image.path));
       uploadResponse.then((fileName) {
         if (fileName.isNotEmpty) {
           setState(() {
@@ -113,13 +115,13 @@ class BillActivityState extends State<BillActivity> {
             new IconButton(
               icon: FadeInImage.assetNetwork(
                 placeholder: 'assets/image_placeholder.png',
-                image: mediaURL + file,
+                image: Config.mediaURL + file,
               ),
               onPressed: () {
                 Navigator.push(
                   context,
                   new MaterialPageRoute(
-                      builder: (context) => new PhotoActivity(mediaURL + file)),
+                      builder: (context) => new PhotoActivity(Config.mediaURL + file)),
                 );
               },
             ),
@@ -141,12 +143,12 @@ class BillActivityState extends State<BillActivity> {
     fileWidgets.add(new Row(
       children: <Widget>[
         new Expanded(
-          child: new FlatButton(
+          child: new TextButton(
             onPressed: () {
               Future<Admins> statusResponse =
-                  getStatus({"hostel_id": hostelID});
+                  getStatus({"hostel_id": Config.hostelID ?? ''});
               statusResponse.then((response) {
-                if (response.meta.status != STATUS_403) {
+                if (response.meta.status != Config.STATUS_403) {
                   selectPhoto(context);
                 } else {
                   Navigator.push(
@@ -165,20 +167,22 @@ class BillActivityState extends State<BillActivity> {
   }
 
   Future _selectDate(BuildContext context, String type) async {
-    DateTime picked = await showDatePicker(
+    DateTime? picked = await showDatePicker(
         context: context,
         initialDate: new DateTime.now(),
         firstDate: new DateTime.now().subtract(new Duration(days: 365)),
         lastDate: new DateTime.now().add(new Duration(days: 365)));
-    setState(() {
-      if (type == '1') {
-        paidDate.text = headingDateFormat.format(picked);
-        pickedPaidDate = dateFormat.format(picked);
-      } else {
-        expiryDate.text = headingDateFormat.format(picked);
-        pickedExpiryDate = dateFormat.format(picked);
-      }
-    });
+    if (picked != null) {
+      setState(() {
+        if (type == '1') {
+          paidDate.text = headingDateFormat.format(picked);
+          pickedPaidDate = dateFormat.format(picked);
+        } else {
+          expiryDate.text = headingDateFormat.format(picked);
+          pickedExpiryDate = dateFormat.format(picked);
+        }
+      });
+    }
   }
 
   Future<String> selectTitle(BuildContext context) async {
@@ -194,14 +198,14 @@ class BillActivityState extends State<BillActivity> {
             height: 300,
             child: new ListView.builder(
               shrinkWrap: true,
-              itemCount: billTypes.length,
+              itemCount: Config.billTypes.length,
               itemBuilder: (context, i) {
-                return new FlatButton(
-                  child: new Text(billTypes[i][0]),
+                return new TextButton(
+                  child: new Text(Config.billTypes[i]),
                   onPressed: () {
-                    returned = billTypes[i][1];
-                    type.text = billTypes[i][0];
-                    selectedType = billTypes[i][1];
+                    returned = Config.billTypes[i];
+                    type.text = Config.billTypes[i];
+                    selectedType = Config.billTypes[i];
                     Navigator.of(context).pop();
                   },
                 );
@@ -226,14 +230,14 @@ class BillActivityState extends State<BillActivity> {
             width: MediaQuery.of(context).size.width,
             child: new ListView.builder(
               shrinkWrap: true,
-              itemCount: paymentTypes.length,
+              itemCount: Config.paymentTypes.length,
               itemBuilder: (context, i) {
-                return new FlatButton(
-                  child: new Text(paymentTypes[i][0]),
+                return new TextButton(
+                  child: new Text(Config.paymentTypes[i]),
                   onPressed: () {
-                    returned = paymentTypes[i][1];
-                    payment.text = paymentTypes[i][0];
-                    selectedPayment = paymentTypes[i][1];
+                    returned = Config.paymentTypes[i];
+                    payment.text = Config.paymentTypes[i];
+                    selectedPayment = Config.paymentTypes[i];
                     Navigator.of(context).pop();
                   },
                 );
@@ -258,14 +262,14 @@ class BillActivityState extends State<BillActivity> {
             child: new ListView(
               shrinkWrap: true,
               children: <Widget>[
-                new FlatButton(
+                new TextButton(
                   child: new Text("Camera"),
                   onPressed: () {
                     getImage(ImageSource.camera);
                     Navigator.of(context).pop();
                   },
                 ),
-                new FlatButton(
+                new TextButton(
                   child: new Text("Gallery"),
                   onPressed: () {
                     getImage(ImageSource.gallery);
@@ -330,7 +334,7 @@ class BillActivityState extends State<BillActivity> {
                     load = add(
                       API.BILL,
                       Map.from({
-                        'hostel_id': hostelID,
+                        'hostel_id': Config.hostelID ?? '',
                         'title': "Advance/Token Amount",
                         'paid_date_time': pickedPaidDate,
                         'description': user.name + ' paid advance/token amount',
@@ -346,7 +350,7 @@ class BillActivityState extends State<BillActivity> {
                     );
                   } else {
                     load = add(
-                      API.RENT,
+                      API.BILL,
                       Map.from({
                         'paid_date_time': pickedPaidDate,
                         'expiry_date_time': pickedExpiryDate,
@@ -354,7 +358,7 @@ class BillActivityState extends State<BillActivity> {
                         'title': 'Rent',
                         'name': user.name,
                         'description': user.name + ' paid rent',
-                        'hostel_id': hostelID,
+                        'hostel_id': Config.hostelID ?? '',
                         'document': fileNames.join(","),
                         'type': selectedType,
                         'user_id': user.id,
@@ -664,7 +668,7 @@ class BillActivityState extends State<BillActivity> {
                             groupValue: paid,
                             onChanged: (value) {
                               setState(() {
-                                paid = value;
+                                paid = value ?? 1;
                               });
                             },
                           ),
@@ -681,7 +685,7 @@ class BillActivityState extends State<BillActivity> {
                             groupValue: paid,
                             onChanged: (value) {
                               setState(() {
-                                paid = value;
+                                paid = value ?? 0;
                               });
                             },
                           ),
@@ -702,7 +706,7 @@ class BillActivityState extends State<BillActivity> {
                 child: new Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: <Widget>[
-                    new FlatButton(
+                    new TextButton(
                       child: new Text(
                         (bill == null) ? "" : "DELETE",
                         style: TextStyle(color: Colors.red),
@@ -719,7 +723,7 @@ class BillActivityState extends State<BillActivity> {
                                 API.BILL,
                                 Map.from({'status': '0'}),
                                 Map.from({
-                                  'hostel_id': hostelID,
+                                  'hostel_id': Config.hostelID ?? '',
                                   'id': bill.id,
                                 }));
                             delete.then((response) {
