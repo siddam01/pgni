@@ -10,7 +10,7 @@
 | Component | Status | URL | Pages |
 |-----------|--------|-----|-------|
 | **Admin Portal** | ✅ Deployed | http://54.227.101.30/admin/ | 37 pages |
-| **Tenant Portal** | ✅ Deployed | http://54.227.101.30/tenant/ | 2 pages (working) |
+| **Tenant Portal** | ⚠️ Partial | http://54.227.101.30/tenant/ | 2 pages only |
 | **Backend API** | ✅ Running | http://54.227.101.30:8080 | 15+ endpoints |
 
 ---
@@ -182,9 +182,9 @@ The working tenant dashboard includes:
 
 ---
 
-### 📝 TENANT - ORIGINAL PAGES (16 - NOT DEPLOYED)
+### ❌ TENANT - ORIGINAL PAGES (16 - NOT DEPLOYED)
 
-**Note**: These pages exist in the original source but have 200+ build errors and are not currently deployed.
+**⚠️ CURRENT STATUS**: These pages exist in the original source but have 200+ build errors and are **NOT currently deployed**. Only the 2-page minimal app (login + dashboard) is deployed.
 
 | # | Page Name | File | Purpose | Status |
 |---|-----------|------|---------|--------|
