@@ -1,0 +1,304 @@
+Module,Page,Test Case ID,Functionality/Feature,Test Steps,Expected Result,Actual Result,Pass/Fail,Priority,Remarks
+Authentication,Login,TC-001,Login with valid credentials,"1. Open app
+2. Enter email: priya@example.com
+3. Enter password: Tenant@123
+4. Click Login button","User successfully logs in
+Redirects to Dashboard
+Shows welcome message",,,"HIGH","Critical path"
+Authentication,Login,TC-002,Login with invalid email,"1. Open app
+2. Enter email: invalid@test.com
+3. Enter password: anything
+4. Click Login","Error message displays: 'Invalid credentials'
+User remains on login page",,,"HIGH","Security check"
+Authentication,Login,TC-003,Login validation - empty email,"1. Open app
+2. Leave email field empty
+3. Enter password
+4. Click Login","Validation error: 'Email is required'
+Login button disabled or shows error",,,"HIGH","Form validation"
+Authentication,Login,TC-004,Login validation - empty password,"1. Open app
+2. Enter email
+3. Leave password empty
+4. Click Login","Validation error: 'Password is required'",,,"HIGH","Form validation"
+Authentication,Login,TC-005,Login validation - invalid email format,"1. Enter email: 'notanemail'
+2. Enter password
+3. Click Login","Validation error: 'Invalid email format'",,,"MEDIUM","Input validation"
+Authentication,Login,TC-006,Remember me functionality,"1. Check 'Remember me'
+2. Login successfully
+3. Close and reopen app","User automatically logged in
+Dashboard displayed",,,"LOW","Convenience feature"
+Authentication,Logout,TC-007,Logout from dashboard,"1. Login successfully
+2. Click logout icon/button
+3. Confirm logout","User logged out
+Redirected to login page
+Session cleared",,,"HIGH","Security"
+Dashboard,Dashboard,TC-008,Dashboard loads user data,"1. Login successfully
+2. View dashboard","Displays: User name, Email, Hostel name
+Welcome message shown",,,"HIGH","Core functionality"
+Dashboard,Dashboard,TC-009,Dashboard navigation cards present,"1. View dashboard
+2. Count navigation cards","6 cards visible: Profile, Room, Bills, Issues, Notices, Settings",,,"MEDIUM","Navigation"
+Dashboard,Dashboard,TC-010,Dashboard card click - Profile,"1. Click Profile card","Navigates to Profile page",,,"MEDIUM","Navigation"
+Dashboard,Dashboard,TC-011,Dashboard card click - Room,"1. Click Room card","Navigates to Room Details page",,,"MEDIUM","Navigation"
+Dashboard,Dashboard,TC-012,Dashboard card click - Bills,"1. Click Bills card","Navigates to Bills page",,,"MEDIUM","Navigation"
+Dashboard,Dashboard,TC-013,Dashboard handles missing hostel data,"1. Login with user having no hostel
+2. View dashboard","Shows 'Not assigned' for hostel",,,"LOW","Edge case"
+Profile,View Profile,TC-014,Profile displays complete user info,"1. Navigate to Profile
+2. Scroll through all fields","Displays: Name, Email, Phone, Address, Room No, Rent, Joining Date, Emergency Contact, Documents",,,"CRITICAL","Core feature"
+Profile,View Profile,TC-015,Profile image displays,"1. Navigate to Profile
+2. Check profile image","Profile image loads correctly
+Or placeholder shown if no image",,,"MEDIUM","UI element"
+Profile,View Profile,TC-016,Profile handles missing phone,"1. Login with user having no phone
+2. View profile","Phone field shows: 'Not provided'",,,"MEDIUM","Data handling"
+Profile,View Profile,TC-017,Profile handles missing address,"1. Login with user having incomplete address
+2. View profile","Address shows: 'Not provided'",,,"MEDIUM","Data handling"
+Profile,View Profile,TC-018,Profile shows correct rent amount,"1. Navigate to Profile
+2. Check rent field","Rent amount matches database
+Displays with currency symbol ₹",,,"HIGH","Financial data"
+Profile,View Profile,TC-019,Profile shows room number,"1. Navigate to Profile
+2. Check room number","Correct room number displayed",,,"HIGH","Core info"
+Profile,View Profile,TC-020,Profile shows emergency contact,"1. Navigate to Profile
+2. Scroll to emergency section","Emergency contact name and phone visible",,,"MEDIUM","Important info"
+Profile,Edit Profile,TC-021,Navigate to edit profile,"1. On Profile page
+2. Click 'Edit' button","Edit Profile page opens
+All fields pre-populated",,,"HIGH","Navigation"
+Profile,Edit Profile,TC-022,Update profile name,"1. Navigate to Edit Profile
+2. Change name to 'Test User Updated'
+3. Click Save","Success message shown
+Name updates in profile
+Change persists after app restart",,,"CRITICAL","Core functionality"
+Profile,Edit Profile,TC-023,Update profile phone,"1. Navigate to Edit Profile
+2. Change phone to '9876543210'
+3. Click Save","Phone updates successfully
+Visible in profile view",,,"HIGH","Contact update"
+Profile,Edit Profile,TC-024,Update profile address,"1. Navigate to Edit Profile
+2. Update address
+3. Click Save","Address updates successfully",,,"MEDIUM","Info update"
+Profile,Edit Profile,TC-025,Profile validation - invalid phone,"1. Edit Profile
+2. Enter phone: '12345' (too short)
+3. Click Save","Error: 'Phone must be 10 digits'",,,"MEDIUM","Validation"
+Profile,Edit Profile,TC-026,Profile validation - empty name,"1. Edit Profile
+2. Clear name field
+3. Click Save","Error: 'Name is required'",,,"HIGH","Validation"
+Profile,Edit Profile,TC-027,Update emergency contact,"1. Edit Profile
+2. Update emergency name and phone
+3. Save","Emergency contact updates
+Visible in profile",,,"MEDIUM","Important update"
+Profile,Edit Profile,TC-028,Cancel edit without saving,"1. Edit Profile
+2. Make changes
+3. Click Cancel","Changes not saved
+Profile shows original data",,,"LOW","User control"
+Profile,Edit Profile,TC-029,Upload profile picture,"1. Edit Profile
+2. Click on profile image
+3. Select image from gallery
+4. Save","Image uploads
+Displays in profile",,,"LOW","Enhancement"
+Room,View Room,TC-030,Room details display complete info,"1. Navigate to Room Details","Displays: Room No, Floor, Rent, Capacity, Status (Occupied/Available), Amenities list",,,"CRITICAL","Core feature"
+Room,View Room,TC-031,Room shows amenities list,"1. Navigate to Room
+2. Scroll to amenities section","All amenities listed (AC, WiFi, Bed, Cupboard, etc.)
+Formatted as readable list",,,"HIGH","Important info"
+Room,View Room,TC-032,Room displays correct capacity,"1. Navigate to Room
+2. Check capacity field","Shows max occupancy (e.g., '2 persons')",,,"MEDIUM","Info accuracy"
+Room,View Room,TC-033,Room shows current occupancy,"1. Navigate to Room
+2. Check occupancy","Shows filled/capacity (e.g., '2/2')",,,"MEDIUM","Status info"
+Room,View Room,TC-034,Room photo gallery displays,"1. Navigate to Room
+2. Scroll to photos section","Room photos display in gallery
+Swipeable or grid layout",,,"MEDIUM","Visual info"
+Room,View Room,TC-035,Room photo zoom/view,"1. Navigate to Room
+2. Click on a photo","Photo opens in full screen
+Zoomable
+Swipe to next/previous",,,"LOW","Enhancement"
+Room,View Room,TC-036,Room handles no photos,"1. Navigate to room with no photos
+2. Check photos section","Placeholder image or message: 'No photos available'",,,"LOW","Edge case"
+Room,View Room,TC-037,Room shows roommates list,"1. Navigate to Room
+2. Scroll to roommates section","List of roommates with names
+Or 'No roommates' if single occupancy",,,"MEDIUM","Social feature"
+Room,View Room,TC-038,Room displays floor number,"1. Navigate to Room
+2. Check floor field","Correct floor number shown (e.g., '2nd Floor')",,,"LOW","Info"
+Room,Request Service,TC-039,Request service from room page,"1. Navigate to Room
+2. Click 'Request Service' button","Services page opens
+Or service request form displays",,,"MEDIUM","Feature link"
+Bills,View Bills,TC-040,Bills list displays all bills,"1. Navigate to Bills/Rents
+2. View list","All bills display with: Amount, Due Date, Status, Payment Date (if paid)",,,"CRITICAL","Core feature"
+Bills,View Bills,TC-041,Bills shows pending bills first,"1. Navigate to Bills
+2. Check order","Pending bills at top
+Sorted by due date",,,"HIGH","UX priority"
+Bills,View Bills,TC-042,Bills shows paid bills,"1. Navigate to Bills
+2. Scroll to see paid bills","Paid bills marked with checkmark or 'Paid' status
+Shows payment date",,,"HIGH","Payment history"
+Bills,View Bills,TC-043,Bills filter by status - Pending,"1. Navigate to Bills
+2. Select filter: 'Pending'
+3. Apply","Only unpaid bills display",,,"MEDIUM","Filter feature"
+Bills,View Bills,TC-044,Bills filter by status - Paid,"1. Select filter: 'Paid'
+2. Apply","Only paid bills display",,,"MEDIUM","Filter feature"
+Bills,View Bills,TC-045,Bills filter by date range,"1. Select date range
+2. Apply filter","Bills within date range display",,,"MEDIUM","Filter feature"
+Bills,View Bills,TC-046,Bills total calculation,"1. Navigate to Bills
+2. Check total at bottom","Total amount matches sum of all bills
+Separate totals for paid/pending",,,"HIGH","Financial accuracy"
+Bills,View Bills,TC-047,Bills handles empty state - no bills,"1. Login with user having no bills
+2. Navigate to Bills","Message: 'No bills found'
+Or empty state illustration",,,"LOW","Edge case"
+Bills,View Bill Details,TC-048,Bill details page opens,"1. Navigate to Bills
+2. Click on a bill","Bill details page opens
+Shows: Amount, Due date, Description, Status",,,"MEDIUM","Detail view"
+Bills,View Bill Details,TC-049,Bill details shows payment method,"1. View paid bill details","Payment method shown (Cash/Online/UPI)",,,"LOW","Payment info"
+Bills,View Bill Details,TC-050,Bill shows payment receipt,"1. View paid bill
+2. Check for receipt option","'View Receipt' or 'Download Receipt' button visible",,,"MEDIUM","Documentation"
+Bills,Pay Bill,TC-051,Pay bill button present,"1. View pending bill
+2. Check for pay option","'Pay Now' button visible",,,"HIGH","Payment action"
+Bills,Pay Bill,TC-052,Pay bill redirects to payment,"1. Click 'Pay Now' on a bill","Redirects to payment page or external payment gateway",,,"HIGH","Payment flow"
+Issues,View Issues,TC-053,Issues list displays,"1. Navigate to Issues
+2. View list","All reported issues display with: Title, Status, Date, Type",,,"CRITICAL","Core feature"
+Issues,View Issues,TC-054,Issues shows status badges,"1. View issues list","Status clearly marked: Pending (red/orange), In Progress (yellow), Resolved (green)",,,"HIGH","Visual feedback"
+Issues,View Issues,TC-055,Issues filter by status - Pending,"1. Select filter: 'Pending'
+2. Apply","Only pending issues display",,,"MEDIUM","Filter"
+Issues,View Issues,TC-056,Issues filter by status - Resolved,"1. Select filter: 'Resolved'
+2. Apply","Only resolved issues display",,,"MEDIUM","Filter"
+Issues,View Issues,TC-057,Issues filter by type,"1. Select type filter (Maintenance/Cleaning/Other)
+2. Apply","Issues of selected type display",,,"MEDIUM","Filter"
+Issues,View Issues,TC-058,Issues sorted by date,"1. View issues list
+2. Check order","Most recent issues at top",,,"LOW","UX"
+Issues,View Issues,TC-059,Issues handles empty state,"1. User with no issues
+2. Navigate to Issues","Message: 'No issues reported'
+Plus 'Report Issue' button",,,"LOW","Edge case"
+Issues,View Issue Details,TC-060,Issue details page opens,"1. Click on an issue","Details page shows: Full description, Photos (if any), Status, Created date, Updated date",,,"MEDIUM","Detail view"
+Issues,View Issue Details,TC-061,Issue shows admin response,"1. View resolved issue","Admin response/notes visible (if any)",,,"MEDIUM","Communication"
+Issues,Report New Issue,TC-062,Report issue button present,"1. Navigate to Issues
+2. Check for create button","'Report Issue' button visible (FAB or header)",,,"CRITICAL","Access to feature"
+Issues,Report New Issue,TC-063,Report issue form displays,"1. Click 'Report Issue'","Form opens with fields: Title, Description, Type (dropdown), Upload photos (optional)",,,"CRITICAL","Form access"
+Issues,Report New Issue,TC-064,Submit new issue,"1. Fill all required fields
+2. Add description
+3. Select type
+4. Click Submit","Issue created successfully
+Confirmation message shown
+Issue appears in list",,,"CRITICAL","Core action"
+Issues,Report New Issue,TC-065,Issue validation - empty title,"1. Report Issue
+2. Leave title empty
+3. Submit","Error: 'Title is required'",,,"HIGH","Validation"
+Issues,Report New Issue,TC-066,Issue validation - empty description,"1. Report Issue
+2. Leave description empty
+3. Submit","Error: 'Description is required'",,,"HIGH","Validation"
+Issues,Report New Issue,TC-067,Issue attach photos,"1. Report Issue
+2. Click 'Attach Photos'
+3. Select image
+4. Submit","Photo uploads with issue
+Visible in issue details",,,"MEDIUM","Enhancement"
+Notices,View Notices,TC-068,Notices list displays,"1. Navigate to Notices","All notices display with: Title, Date, Short preview",,,"MEDIUM","Core feature"
+Notices,View Notices,TC-069,Notices show priority/importance,"1. View notices list","Important notices marked (star icon or badge)",,,"MEDIUM","Visual priority"
+Notices,View Notices,TC-070,Notices sorted by date,"1. View notices
+2. Check order","Newest notices at top",,,"LOW","UX"
+Notices,View Notices,TC-071,Notices handles empty state,"1. User with no notices
+2. Navigate to Notices","Message: 'No notices available'",,,"LOW","Edge case"
+Notices,View Notice Details,TC-072,Notice details page opens,"1. Click on a notice","Full notice content displays
+Shows date, title, full text",,,"MEDIUM","Detail view"
+Notices,View Notice Details,TC-073,Notice shows attached files,"1. View notice with attachments","'Download' or 'View' button for attachments",,,"LOW","Document access"
+Notices,View Notice Details,TC-074,Notice marked as read,"1. View a notice
+2. Go back to list","Notice marked as read (visual indicator change)",,,"LOW","Status tracking"
+Documents,View Documents,TC-075,Documents list displays,"1. Navigate to Documents","All uploaded documents display with: Name, Type, Date",,,"MEDIUM","Core feature"
+Documents,View Documents,TC-076,Documents shows file types,"1. View documents list","File type icons visible (PDF, JPG, etc.)",,,"LOW","Visual aid"
+Documents,View Documents,TC-077,Documents sorted by date,"1. View list
+2. Check order","Most recent at top",,,"LOW","UX"
+Documents,View Documents,TC-078,Documents handles empty state,"1. User with no documents
+2. Navigate to Documents","Message: 'No documents uploaded'
+Plus 'Upload Document' button",,,"LOW","Edge case"
+Documents,Upload Document,TC-079,Upload document button present,"1. Navigate to Documents","'Upload' button visible (FAB or header)",,,"MEDIUM","Feature access"
+Documents,Upload Document,TC-080,Upload document form,"1. Click 'Upload'","Form opens: Select file, Enter title, Select type (ID/Agreement/Other)",,,"MEDIUM","Form access"
+Documents,Upload Document,TC-081,Upload PDF document,"1. Upload form
+2. Select PDF file
+3. Add title
+4. Upload","Document uploads successfully
+Appears in list",,,"MEDIUM","File type support"
+Documents,Upload Document,TC-082,Upload image document,"1. Upload form
+2. Select image (JPG/PNG)
+3. Add title
+4. Upload","Image uploads successfully",,,"MEDIUM","File type support"
+Documents,Upload Document,TC-083,Upload validation - file size,"1. Try uploading file > 5MB","Error: 'File size too large (max 5MB)'",,,"LOW","Validation"
+Documents,Upload Document,TC-084,Upload validation - empty title,"1. Select file
+2. Leave title empty
+3. Upload","Error: 'Title is required'",,,"MEDIUM","Validation"
+Documents,Download Document,TC-085,Download document,"1. Documents list
+2. Click download icon on a document","File downloads to device
+Or opens in viewer",,,"MEDIUM","File access"
+Documents,Delete Document,TC-086,Delete document,"1. Click delete icon on document
+2. Confirm deletion","Document deleted
+Removed from list
+Confirmation shown",,,"LOW","Management"
+Settings,View Settings,TC-087,Settings page displays,"1. Navigate to Settings","Settings page opens with sections: Profile, Notifications, About, Logout",,,"MEDIUM","Feature access"
+Settings,App Settings,TC-088,View app version,"1. Navigate to Settings
+2. Scroll to 'About' section","App version number displayed",,,"LOW","Info"
+Settings,App Settings,TC-089,Change hostel (if applicable),"1. Settings > Change Hostel
+2. Select new hostel
+3. Save","Hostel changes
+App reloads with new hostel data",,,"LOW","Rare feature"
+Settings,App Settings,TC-090,Notification preferences,"1. Settings > Notifications
+2. Toggle notification types","Preferences saved
+Affects future notifications",,,"LOW","User control"
+Settings,App Settings,TC-091,Logout from settings,"1. Settings > Logout
+2. Confirm","User logged out
+Redirected to login",,,"HIGH","Security"
+Settings,Profile Settings,TC-092,Navigate to profile from settings,"1. Settings > Profile
+2. Click","Navigates to Profile page",,,"LOW","Navigation"
+Support,View Support,TC-093,Support page displays,"1. Navigate to Support","Support page shows: Contact form or help options",,,"MEDIUM","Feature access"
+Support,Contact Support,TC-094,Submit support request,"1. Navigate to Support
+2. Fill form: Name, Email, Message
+3. Submit","Request submitted successfully
+Confirmation shown
+Email sent to admin",,,"MEDIUM","Communication"
+Support,Contact Support,TC-095,Support validation - empty message,"1. Support form
+2. Leave message empty
+3. Submit","Error: 'Message is required'",,,"MEDIUM","Validation"
+Support,Contact Support,TC-096,Support shows contact info,"1. Navigate to Support
+2. Scroll down","Shows: Email, Phone, Address of hostel/admin",,,"LOW","Alternate contact"
+Services,View Services,TC-097,Services page displays,"1. Navigate to Services","Services page shows available services: Laundry, Cleaning, Maintenance, etc.",,,"MEDIUM","Feature list"
+Services,Request Service,TC-098,Request laundry service,"1. Services > Laundry
+2. Fill details
+3. Submit","Service request created
+Confirmation shown",,,"MEDIUM","Service type"
+Services,Request Service,TC-099,Request cleaning service,"1. Services > Cleaning
+2. Fill details
+3. Submit","Request created successfully",,,"MEDIUM","Service type"
+Services,Request Service,TC-100,Service validation - empty details,"1. Request service
+2. Leave details empty
+3. Submit","Error: 'Details required'",,,"LOW","Validation"
+General,Navigation,TC-101,Bottom navigation present,"1. Login
+2. Check bottom of screen","Navigation bar visible with tabs",,,"HIGH","Core UX"
+General,Navigation,TC-102,Navigation tab - Home,"1. Click Home tab","Navigates to Dashboard",,,"HIGH","Navigation"
+General,Navigation,TC-103,Navigation tab - Profile,"1. Click Profile tab","Navigates to Profile",,,"HIGH","Navigation"
+General,Navigation,TC-104,Navigation tab - More/Menu,"1. Click More tab","Shows menu with all options",,,"MEDIUM","Navigation"
+General,Navigation,TC-105,Back button works,"1. Navigate to any page
+2. Press back button (system or in-app)","Returns to previous page",,,"MEDIUM","UX"
+General,Navigation,TC-106,App bar title correct,"1. Navigate through pages","Each page shows correct title in app bar",,,"LOW","UX"
+General,Network,TC-107,No internet - app start,"1. Disable internet
+2. Open app","Shows: 'No internet connection'
+Login disabled",,,"HIGH","Error handling"
+General,Network,TC-108,No internet - page load,"1. Login (with internet)
+2. Disable internet
+3. Navigate to any page","Error message shown
+Retry button available",,,"HIGH","Error handling"
+General,Network,TC-109,Internet restored,"1. No internet state
+2. Enable internet
+3. Click retry","App successfully loads data",,,"HIGH","Recovery"
+General,Performance,TC-110,App launches quickly,"1. Open app from closed state","App opens in <2 seconds",,,"MEDIUM","Performance"
+General,Performance,TC-111,Page loads quickly,"1. Navigate between pages","Each page loads in <3 seconds",,,"MEDIUM","Performance"
+General,Performance,TC-112,Smooth scrolling,"1. Scroll through lists (bills, issues, etc.)","Scrolling is smooth, no lag",,,"LOW","UX"
+General,UI/UX,TC-113,All buttons clickable,"1. Navigate through app
+2. Test all visible buttons","All buttons respond to taps
+Visual feedback (ripple/press effect)",,,"HIGH","UX"
+General,UI/UX,TC-114,Text readability,"1. Navigate through all pages
+2. Check all text","All text is readable
+Proper font size and contrast",,,"MEDIUM","Accessibility"
+General,UI/UX,TC-115,Images load correctly,"1. Navigate to pages with images
+2. Check all images","All images load without broken icons
+Proper sizing",,,"MEDIUM","UX"
+General,UI/UX,TC-116,Loading indicators,"1. Perform actions that require loading","Loading indicator shown during API calls
+Spinner or progress bar visible",,,"MEDIUM","User feedback"
+General,UI/UX,TC-117,Error messages clear,"1. Trigger various errors","Error messages are clear and actionable
+Tell user what went wrong",,,"MEDIUM","UX"
+General,UI/UX,TC-118,Success messages shown,"1. Perform successful actions (save, submit, etc.)","Success confirmation shown
+Green toast/snackbar",,,"LOW","User feedback"
+General,Security,TC-119,Session expires after timeout,"1. Login
+2. Leave app idle for 30 minutes
+3. Try to perform action","Session expired message
+Redirected to login",,,"HIGH","Security"
+General,Security,TC-120,Password not visible when typing,"1. Login page
+2. Type password","Password characters hidden (dots/asterisks)",,,"HIGH","Security"
+
