@@ -4,7 +4,7 @@ import 'dart:async';
 import 'package:modal_progress_hud_nsn/modal_progress_hud_nsn.dart';
 
 import '../utils/utils.dart';
-import '../utils/Config.API.dart';
+import '../utils/api.dart';
 import '../utils/models.dart';
 
 class FoodActivity extends StatefulWidget {

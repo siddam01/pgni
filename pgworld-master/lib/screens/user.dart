@@ -1,14 +1,15 @@
-import 'dart:io';import 'package:cloudpg/screens/pro.dart';
-import 'package:flutter/material.dart';
+import 'dart:io';
 import 'dart:async';
 
+import 'package:cloudpg/screens/pro.dart';
+import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:modal_progress_hud_nsn/modal_progress_hud_nsn.dart';
 
-import '../utils/utils.dart';
-import '../utils/Config.API.dart';
+import '../utils/api.dart';
 import '../utils/config.dart';
 import '../utils/models.dart';
+import '../utils/utils.dart';
 import './photo.dart';
 
 class UserActivity extends StatefulWidget {
@@ -42,7 +43,7 @@ class UserActivityState extends State<UserActivity> {
   User user;
   Room room;
 
-  String roomID;
+  late String roomID;
 
   bool loading = false;
   List<String> fileNames = [];
@@ -330,7 +331,7 @@ class UserActivityState extends State<UserActivity> {
 
                   Future<bool> load;
                   load = update(
-                    Config.API.USER,
+                    API.USER,
                     Map.from({
                       'name': name.text,
                       'phone': phone.text,
@@ -711,9 +712,9 @@ class UserActivityState extends State<UserActivity> {
                               loading = true;
                             });
                             Future<bool> deleteResquest = delete(
-                                Config.API.USER,
+                                API.USER,
                                 Map.from({
-                                  'hostel_id': Config.hostelID,
+                                  'hostel_id': Config.hostelID ?? '',
                                   'id': user.id,
                                   'room_id': user.roomID,
                                   'vacating': user.vacating,
