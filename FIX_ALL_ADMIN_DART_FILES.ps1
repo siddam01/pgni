@@ -91,7 +91,7 @@ foreach ($file in $filesToFix) {
         $originalContent = $content
         
         # Fix import statement
-        $content = $content -replace "import 'package:modal_progress_hud/modal_progress_hud\.dart';", "import 'package:modal_progress_hud_nsn/modal_progress_hud_nsn.dart';"
+        $content = $content -replace [regex]::Escape("import 'package:modal_progress_hud/modal_progress_hud.dart';"), "import 'package:modal_progress_hud_nsn/modal_progress_hud_nsn.dart';"
         
         if ($content -ne $originalContent) {
             Set-Content $file $content -NoNewline
