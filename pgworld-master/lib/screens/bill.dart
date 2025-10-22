@@ -2,7 +2,7 @@ import 'package:cloudpg/screens/pro.dart';
 import 'package:flutter/material.dart';
 
 import 'package:image_picker/image_picker.dart';
-import 'package:modal_progress_hud/modal_progress_hud.dart';
+import 'package:modal_progress_hud_nsn/modal_progress_hud_nsn.dart';
 
 import '../utils/api.dart';
 import '../utils/config.dart';
@@ -70,13 +70,13 @@ class BillActivityState extends State<BillActivity> {
     paidDate.text = headingDateFormat.format(new DateTime.now());
     pickedPaidDate = dateFormat.format(new DateTime.now());
     fileNames = bill.document.split(",");
-      selectedType = bill.type;
+    selectedType = bill.type;
     type.text = getBillType(bill.type);
-      selectedPayment = bill.payment;
+    selectedPayment = bill.payment;
     payment.text = getPaymentType(bill.payment);
-      transactionID.text = bill.transactionID;
-      billID.text = bill.billID;
-      amount.text = bill.amount;
+    transactionID.text = bill.transactionID;
+    billID.text = bill.billID;
+    amount.text = bill.amount;
     paidDate.text = headingDateFormat.format(DateTime.parse(bill.paidDateTime));
     pickedPaidDate = dateFormat.format(DateTime.parse(bill.paidDateTime));
     loadDocuments();
