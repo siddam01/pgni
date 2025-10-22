@@ -1,11 +1,11 @@
-import 'dart:io';import 'package:cloudpg/screens/pro.dart';
+import 'package:cloudpg/screens/pro.dart';
 import 'package:flutter/material.dart';
 
 import 'package:image_picker/image_picker.dart';
-import 'package:modal_progress_hud_nsn/modal_progress_hud_nsn.dart';
+import 'package:modal_progress_hud/modal_progress_hud.dart';
 
 import '../utils/utils.dart';
-import '../utils/Config.API.dart';
+import '../utils/api.dart';
 import '../utils/config.dart';
 import '../utils/models.dart';
 import './photo.dart';
@@ -33,8 +33,8 @@ class EmployeeActivityState extends State<EmployeeActivity> {
   Employee employee;
 
   bool loading = false;
-  List<String> fileNames = [];
-  List<Widget> fileWidgets = [];
+  List<String> fileNames = new List();
+  List<Widget> fileWidgets = new List();
 
   EmployeeActivityState(this.employee);
 
@@ -54,13 +54,13 @@ class EmployeeActivityState extends State<EmployeeActivity> {
   }
 
   Future getImage(ImageSource source) async {
-    var image = await ImagePicker().pickImage(source: source);
+    var image = await ImagePicker.pickImage(source: source);
 
     if (image != null) {
       setState(() {
         loading = true;
       });
-      Future<String> uploadResponse = upload(File(image.path));
+      Future<String> uploadResponse = upload(image);
       uploadResponse.then((fileName) {
         if (fileName.isNotEmpty) {
           setState(() {
@@ -87,14 +87,14 @@ class EmployeeActivityState extends State<EmployeeActivity> {
             child: new ListView(
               shrinkWrap: true,
               children: <Widget>[
-                new TextButton(
+                new FlatButton(
                   child: new Text("Camera"),
                   onPressed: () {
                     getImage(ImageSource.camera);
                     Navigator.of(context).pop();
                   },
                 ),
-                new TextButton(
+                new FlatButton(
                   child: new Text("Gallery"),
                   onPressed: () {
                     getImage(ImageSource.gallery);
@@ -118,12 +118,12 @@ class EmployeeActivityState extends State<EmployeeActivity> {
         fileWidgets.add(new Row(
           children: <Widget>[
             new IconButton(
-              icon: new Image.network(Config.mediaURL + file),
+              icon: new Image.network(mediaURL + file),
               onPressed: () {
                 Navigator.push(
                   context,
                   new MaterialPageRoute(
-                      builder: (context) => new PhotoActivity(Config.mediaURL + file)),
+                      builder: (context) => new PhotoActivity(mediaURL + file)),
                 );
               },
             ),
@@ -145,12 +145,12 @@ class EmployeeActivityState extends State<EmployeeActivity> {
     fileWidgets.add(new Row(
       children: <Widget>[
         new Expanded(
-          child: new TextButton(
+          child: new FlatButton(
             onPressed: () {
               Future<Admins> statusResponse =
-                  getStatus({"hostel_id": Config.hostelID});
+                  getStatus({"hostel_id": hostelID});
               statusResponse.then((response) {
-                if (response.meta.status != Config.STATUS_403) {
+                if (response.meta.status != STATUS_403) {
                   selectPhoto(context);
                 } else {
                   Navigator.push(
@@ -169,7 +169,7 @@ class EmployeeActivityState extends State<EmployeeActivity> {
   }
 
   Future _selectDate(BuildContext context) async {
-    DateTime? picked = await showDatePicker(
+    DateTime picked = await showDatePicker(
         context: context,
         initialDate: new DateTime.now(),
         firstDate: new DateTime.now().subtract(new Duration(days: 365)),
@@ -223,7 +223,7 @@ class EmployeeActivityState extends State<EmployeeActivity> {
 
                   Future<bool> load;
                   load = update(
-                    Config.API.EMPLOYEE,
+                    API.EMPLOYEE,
                     Map.from({
                       'name': name.text,
                       'designation': designation.text,
@@ -233,7 +233,7 @@ class EmployeeActivityState extends State<EmployeeActivity> {
                       'salary': salary.text,
                       'document': fileNames.join(","),
                     }),
-                    Map.from({'hostel_id': Config.hostelID, 'id': employee.id}),
+                    Map.from({'hostel_id': hostelID, 'id': employee.id}),
                   );
                   load.then((onValue) {
                     setState(() {
@@ -434,7 +434,7 @@ class EmployeeActivityState extends State<EmployeeActivity> {
                 child: new Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: <Widget>[
-                    new TextButton(
+                    new FlatButton(
                       child: new Text(
                         (employee == null) ? "" : "DELETE",
                         style: TextStyle(color: Colors.red),
@@ -448,10 +448,10 @@ class EmployeeActivityState extends State<EmployeeActivity> {
                               loading = true;
                             });
                             Future<bool> delete = update(
-                                Config.API.EMPLOYEE,
+                                API.EMPLOYEE,
                                 Map.from({'status': '0'}),
                                 Map.from({
-                                  'hostel_id': Config.hostelID,
+                                  'hostel_id': hostelID,
                                   'id': employee.id,
                                 }));
                             delete.then((response) {

@@ -1,66 +1,126 @@
-import 'dart:io';import 'package:cloudpg/screens/pro.dart';
+import 'package:cloudpg/screens/pro.dart';
 import 'package:flutter/material.dart';
+import 'dart:async';
 
 import 'package:image_picker/image_picker.dart';
-import 'package:modal_progress_hud_nsn/modal_progress_hud_nsn.dart';
+import 'package:modal_progress_hud/modal_progress_hud.dart';
 
 import '../utils/utils.dart';
-import '../utils/Config.API.dart';
+import '../utils/api.dart';
 import '../utils/config.dart';
 import '../utils/models.dart';
 import './photo.dart';
 
-class EmployeeActivity extends StatefulWidget {
-  final Employee employee;
+class UserActivity extends StatefulWidget {
+  final User user;
+  final Room room;
 
-  EmployeeActivity(this.employee);
+  UserActivity(this.user, this.room);
 
   @override
   State<StatefulWidget> createState() {
-    return new EmployeeActivityState(employee);
+    return new UserActivityState(user, room);
   }
 }
 
-class EmployeeActivityState extends State<EmployeeActivity> {
+class UserActivityState extends State<UserActivity> {
+  int eating = 0;
+
   TextEditingController name = new TextEditingController();
-  TextEditingController designation = new TextEditingController();
   TextEditingController phone = new TextEditingController();
   TextEditingController email = new TextEditingController();
   TextEditingController address = new TextEditingController();
-  TextEditingController salary = new TextEditingController();
+  TextEditingController emergencyName = new TextEditingController();
+  TextEditingController emergencyPhone = new TextEditingController();
+  TextEditingController rent = new TextEditingController();
+  TextEditingController advance = new TextEditingController();
   TextEditingController joiningDate = new TextEditingController();
+  TextEditingController roomNo = new TextEditingController();
 
-  Employee employee;
+  String pickedJoiningDate = '';
+
+  User user;
+  Room room;
+
+  String roomID;
 
   bool loading = false;
-  List<String> fileNames = [];
-  List<Widget> fileWidgets = [];
+  List<String> fileNames = new List();
+  List<Widget> fileWidgets = new List();
+  List<Room> rooms = new List();
 
-  EmployeeActivityState(this.employee);
+  UserActivityState(this.user, this.room);
 
   bool nameCheck = false;
 
   @override
   void initState() {
     super.initState();
-    name.text = employee.name;
-    designation.text = employee.designation;
-    phone.text = employee.phone;
-    email.text = employee.email;
-    address.text = employee.address;
-    salary.text = employee.salary;
-    fileNames = employee.document.split(",");
+    joiningDate.text =
+        headingDateFormat.format(new DateTime.now().add(new Duration(days: 5)));
+    pickedJoiningDate =
+        dateFormat.format(new DateTime.now().add(new Duration(days: 5)));
+    name.text = user.name;
+    phone.text = user.phone;
+    email.text = user.email;
+    address.text = user.address;
+    emergencyName.text = user.emerContact;
+    emergencyPhone.text = user.emerPhone;
+    rent.text = user.rent;
+    eating = int.parse(user.food);
+    joiningDate.text =
+        headingDateFormat.format(DateTime.parse(user.joiningDateTime));
+    pickedJoiningDate = dateFormat.format(DateTime.parse(user.joiningDateTime));
+    fileNames = user.document.split(",");
+    roomID = user.roomID;
     loadDocuments();
+    getRoomsIDs();
+  }
+
+  void getRoomsIDs() {
+    checkInternet().then((internet) {
+      if (!internet) {
+        oneButtonDialog(context, "No Internet connection", "", true);
+        setState(() {
+          loading = false;
+        });
+      } else {
+        setState(() {
+          loading = true;
+        });
+        Map<String, String> filter = new Map();
+        filter["limit"] = "10000";
+        filter["hostel_id"] = hostelID;
+        filter["status"] = "1";
+        filter["resp"] = "roomno,id,rent";
+        Future<Rooms> data = getRooms(filter);
+        data.then((response) {
+          rooms.addAll(response.rooms);
+          rooms.forEach((room) {
+            if (room.id == roomID) {
+              roomNo.text = room.roomno;
+            }
+          });
+          if (response.meta.messageType == "1") {
+            oneButtonDialog(context, "", response.meta.message,
+                !(response.meta.status == STATUS_403));
+          }
+          setState(() {
+            loading = false;
+          });
+        });
+      }
+    });
   }
 
   Future getImage(ImageSource source) async {
-    var image = await ImagePicker().pickImage(source: source);
+    var image = await ImagePicker.pickImage(source: source);
 
     if (image != null) {
       setState(() {
         loading = true;
       });
-      Future<String> uploadResponse = upload(File(image.path));
+      Future<String> uploadResponse = upload(image);
       uploadResponse.then((fileName) {
         if (fileName.isNotEmpty) {
           setState(() {
@@ -87,14 +147,14 @@ class EmployeeActivityState extends State<EmployeeActivity> {
             child: new ListView(
               shrinkWrap: true,
               children: <Widget>[
-                new TextButton(
+                new FlatButton(
                   child: new Text("Camera"),
                   onPressed: () {
                     getImage(ImageSource.camera);
                     Navigator.of(context).pop();
                   },
                 ),
-                new TextButton(
+                new FlatButton(
                   child: new Text("Gallery"),
                   onPressed: () {
                     getImage(ImageSource.gallery);
@@ -111,19 +171,21 @@ class EmployeeActivityState extends State<EmployeeActivity> {
   }
 
   void loadDocuments() {
-    print(fileNames);
     fileWidgets.clear();
     fileNames.forEach((file) {
       if (file.length > 0) {
         fileWidgets.add(new Row(
           children: <Widget>[
             new IconButton(
-              icon: new Image.network(Config.mediaURL + file),
+              icon: FadeInImage.assetNetwork(
+                placeholder: 'assets/image_placeholder.png',
+                image: mediaURL + file,
+              ),
               onPressed: () {
                 Navigator.push(
                   context,
                   new MaterialPageRoute(
-                      builder: (context) => new PhotoActivity(Config.mediaURL + file)),
+                      builder: (context) => new PhotoActivity(mediaURL + file)),
                 );
               },
             ),
@@ -145,12 +207,12 @@ class EmployeeActivityState extends State<EmployeeActivity> {
     fileWidgets.add(new Row(
       children: <Widget>[
         new Expanded(
-          child: new TextButton(
+          child: new FlatButton(
             onPressed: () {
               Future<Admins> statusResponse =
-                  getStatus({"hostel_id": Config.hostelID});
+                  getStatus({"hostel_id": hostelID});
               statusResponse.then((response) {
-                if (response.meta.status != Config.STATUS_403) {
+                if (response.meta.status != STATUS_403) {
                   selectPhoto(context);
                 } else {
                   Navigator.push(
@@ -169,12 +231,58 @@ class EmployeeActivityState extends State<EmployeeActivity> {
   }
 
   Future _selectDate(BuildContext context) async {
-    DateTime? picked = await showDatePicker(
+    DateTime picked = await showDatePicker(
         context: context,
-        initialDate: new DateTime.now(),
+        initialDate: new DateTime.now().add(new Duration(days: 5)),
         firstDate: new DateTime.now().subtract(new Duration(days: 365)),
         lastDate: new DateTime.now().add(new Duration(days: 365)));
-    setState(() => joiningDate.text = dateFormat.format(picked));
+    setState(() {
+      if (headingDateFormat.format(new DateTime.now()) ==
+          headingDateFormat.format(picked)) {
+        joiningDate.text = "Joining Today";
+      } else {
+        joiningDate.text = headingDateFormat.format(picked);
+      }
+      pickedJoiningDate = dateFormat.format(picked);
+    });
+  }
+
+  Future<String> selectRoom(BuildContext context, List<Room> rooms) async {
+    String returned = "";
+
+    await showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: new Text("Select room"),
+          content: new Container(
+            width: MediaQuery.of(context).size.width,
+            height: 300,
+            child: new ListView.builder(
+              shrinkWrap: true,
+              itemCount: rooms.length,
+              itemBuilder: (context, i) {
+                return new FlatButton(
+                  child: new Text(rooms[i].roomno),
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                    returned = rooms[i].id;
+
+                    roomID = rooms[i].id;
+                    roomNo.text = rooms[i].roomno;
+
+                    setState(() {
+                      rent.text = rooms[i].rent;
+                    });
+                  },
+                );
+              },
+            ),
+          ),
+        );
+      },
+    );
+    return returned;
   }
 
   @override
@@ -186,7 +294,7 @@ class EmployeeActivityState extends State<EmployeeActivity> {
         ),
         backgroundColor: Colors.white,
         title: new Text(
-          "Employee",
+          room.roomno,
           style: TextStyle(color: Colors.black),
         ),
         elevation: 4.0,
@@ -201,7 +309,6 @@ class EmployeeActivityState extends State<EmployeeActivity> {
               setState(() {
                 loading = true;
               });
-
               checkInternet().then((internet) {
                 if (!internet) {
                   oneButtonDialog(context, "No Internet connection", "", true);
@@ -223,17 +330,22 @@ class EmployeeActivityState extends State<EmployeeActivity> {
 
                   Future<bool> load;
                   load = update(
-                    Config.API.EMPLOYEE,
+                    API.USER,
                     Map.from({
                       'name': name.text,
-                      'designation': designation.text,
                       'phone': phone.text,
                       'email': email.text,
                       'address': address.text,
-                      'salary': salary.text,
+                      'emer_contact': emergencyName.text,
+                      'emer_phone': emergencyPhone.text,
+                      'food': eating.toString(),
+                      'rent': rent.text,
                       'document': fileNames.join(","),
+                      'room_id': roomID,
+                      'prev_room_id': user.roomID,
+                      'joining_date_time': pickedJoiningDate,
                     }),
-                    Map.from({'hostel_id': Config.hostelID, 'id': employee.id}),
+                    Map.from({'hostel_id': hostelID, 'id': user.id}),
                   );
                   load.then((onValue) {
                     setState(() {
@@ -284,29 +396,36 @@ class EmployeeActivityState extends State<EmployeeActivity> {
                   ),
                 ],
               ),
-              new Container(
-                height: 50,
-                margin: new EdgeInsets.fromLTRB(0, 15, 0, 0),
-                child: new Row(
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  children: <Widget>[
-                    new Expanded(
-                      child: new Container(
-                        child: new TextField(
-                          controller: designation,
-                          textInputAction: TextInputAction.next,
-                          keyboardType: TextInputType.text,
-                          decoration: InputDecoration(
-                            isDense: true,
-                            prefixIcon: Icon(Icons.assignment_ind),
-                            border: OutlineInputBorder(),
-                            labelText: 'Designation',
+              new GestureDetector(
+                onTap: () {
+                  selectRoom(context, rooms);
+                },
+                child: new Container(
+                  color: Colors.transparent,
+                  height: 50,
+                  margin: new EdgeInsets.fromLTRB(0, 15, 0, 0),
+                  child: new Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: <Widget>[
+                      new Expanded(
+                        child: new Container(
+                          child: new TextField(
+                            enabled: false,
+                            controller: roomNo,
+                            textInputAction: TextInputAction.next,
+                            keyboardType: TextInputType.number,
+                            decoration: InputDecoration(
+                              isDense: true,
+                              prefixIcon: Icon(Icons.room),
+                              border: OutlineInputBorder(),
+                              labelText: 'Room No.',
+                            ),
+                            onSubmitted: (String value) {},
                           ),
-                          onSubmitted: (String value) {},
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
               new Container(
@@ -318,14 +437,14 @@ class EmployeeActivityState extends State<EmployeeActivity> {
                     new Expanded(
                       child: new Container(
                         child: new TextField(
-                          controller: salary,
+                          controller: rent,
                           textInputAction: TextInputAction.next,
                           keyboardType: TextInputType.number,
                           decoration: InputDecoration(
                             isDense: true,
-                            prefixIcon: Icon(Icons.money_off),
+                            prefixIcon: Icon(Icons.attach_money),
                             border: OutlineInputBorder(),
-                            labelText: 'Salary',
+                            labelText: 'Rent',
                           ),
                           onSubmitted: (String value) {},
                         ),
@@ -334,6 +453,41 @@ class EmployeeActivityState extends State<EmployeeActivity> {
                   ],
                 ),
               ),
+              new Container(),
+              (user.joining == "1")
+                  ? new GestureDetector(
+                      onTap: () {
+                        _selectDate(context);
+                      },
+                      child: new Container(
+                        color: Colors.transparent,
+                        height: 50,
+                        margin: new EdgeInsets.fromLTRB(0, 15, 0, 0),
+                        child: new Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: <Widget>[
+                            new Expanded(
+                              child: new Container(
+                                child: new TextField(
+                                  enabled: false,
+                                  controller: joiningDate,
+                                  textInputAction: TextInputAction.next,
+                                  keyboardType: TextInputType.datetime,
+                                  decoration: InputDecoration(
+                                    isDense: true,
+                                    prefixIcon: Icon(Icons.calendar_today),
+                                    border: OutlineInputBorder(),
+                                    labelText: 'Joining Date',
+                                  ),
+                                  onSubmitted: (String value) {},
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    )
+                  : new Container(),
               new Container(
                 height: 50,
                 margin: new EdgeInsets.fromLTRB(0, 15, 0, 0),
@@ -385,6 +539,7 @@ class EmployeeActivityState extends State<EmployeeActivity> {
                 ),
               ),
               new Container(
+                // height: 50,
                 margin: new EdgeInsets.fromLTRB(0, 15, 0, 0),
                 child: new Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -428,33 +583,143 @@ class EmployeeActivityState extends State<EmployeeActivity> {
                   ],
                 ),
               ),
-              new Container(),
+              new Container(
+                height: 50,
+                margin: new EdgeInsets.fromLTRB(0, 15, 0, 0),
+                child: new Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: <Widget>[
+                    new Expanded(
+                      child: new Container(
+                        child: new TextField(
+                          controller: emergencyName,
+                          textInputAction: TextInputAction.next,
+                          keyboardType: TextInputType.text,
+                          decoration: InputDecoration(
+                            isDense: true,
+                            prefixIcon: Icon(Icons.account_circle),
+                            border: OutlineInputBorder(),
+                            labelText: 'Emergency Contact Name',
+                          ),
+                          onSubmitted: (String value) {},
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              new Container(
+                height: 50,
+                margin: new EdgeInsets.fromLTRB(0, 15, 0, 0),
+                child: new Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: <Widget>[
+                    new Expanded(
+                      child: new Container(
+                        child: new TextField(
+                          controller: emergencyPhone,
+                          textInputAction: TextInputAction.next,
+                          keyboardType: TextInputType.phone,
+                          decoration: InputDecoration(
+                            isDense: true,
+                            prefixIcon: Icon(Icons.contact_phone),
+                            border: OutlineInputBorder(),
+                            labelText: 'Emergency Contact Number',
+                          ),
+                          onSubmitted: (String value) {},
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
               new Container(
                 margin: new EdgeInsets.fromLTRB(0, 25, 0, 0),
                 child: new Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: <Widget>[
-                    new TextButton(
+                    new Radio(
+                      value: 0,
+                      groupValue: eating,
+                      onChanged: (value) {
+                        setState(() {
+                          eating = value;
+                        });
+                      },
+                    ),
+                    new GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          eating = 0;
+                        });
+                      },
+                      child: new Text("Veg"),
+                    ),
+                    new Radio(
+                      value: 1,
+                      groupValue: eating,
+                      onChanged: (value) {
+                        setState(() {
+                          eating = value;
+                        });
+                      },
+                    ),
+                    new GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          eating = 1;
+                        });
+                      },
+                      child: new Text("Non Veg"),
+                    ),
+                    new Radio(
+                      value: 2,
+                      groupValue: eating,
+                      onChanged: (value) {
+                        setState(() {
+                          eating = value;
+                        });
+                      },
+                    ),
+                    new GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          eating = 2;
+                        });
+                      },
+                      child: new Text("None"),
+                    ),
+                  ],
+                ),
+              ),
+              new Container(
+                margin: new EdgeInsets.fromLTRB(0, 25, 0, 0),
+                child: new Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: <Widget>[
+                    new FlatButton(
                       child: new Text(
-                        (employee == null) ? "" : "DELETE",
+                        "REMOVE",
                         style: TextStyle(color: Colors.red),
                       ),
                       onPressed: () {
-                        Future<bool> dialog = twoButtonDialog(
-                            context, "Do you want to delete the employee?", "");
+                        Future<bool> dialog = twoButtonDialog(context,
+                            "Do you want to remove the user from hostel?", "");
                         dialog.then((onValue) {
                           if (onValue) {
                             setState(() {
                               loading = true;
                             });
-                            Future<bool> delete = update(
-                                Config.API.EMPLOYEE,
-                                Map.from({'status': '0'}),
+                            Future<bool> deleteResquest = delete(
+                                API.USER,
                                 Map.from({
-                                  'hostel_id': Config.hostelID,
-                                  'id': employee.id,
+                                  'hostel_id': hostelID,
+                                  'id': user.id,
+                                  'room_id': user.roomID,
+                                  'vacating': user.vacating,
+                                  'joining': user.joining,
                                 }));
-                            delete.then((response) {
+                            deleteResquest.then((response) {
                               setState(() {
                                 loading = false;
                               });

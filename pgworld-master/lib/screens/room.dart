@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
-import 'package:modal_progress_hud/modal_progress_hud.dart';
+import 'package:modal_progress_hud_nsn/modal_progress_hud_nsn.dart';
 
-import '../utils/api.dart';
+import '../utils/Config.API.dart';
 import '../utils/config.dart';
 import '../utils/models.dart';
 import '../utils/utils.dart';
@@ -49,7 +49,7 @@ class RoomActivityState extends State<RoomActivity> {
   }
 
   List<Widget> amenitiesWidget() {
-    List<Widget> widgets = new List();
+    List<Widget> widgets = [];
     avaiableAmenities.forEach((k, v) => widgets.add(new GestureDetector(
           onTap: () {
             setState(() {
@@ -140,7 +140,7 @@ class RoomActivityState extends State<RoomActivity> {
                     });
                   }
 
-                  List<String> savedAmenities = new List();
+                  List<String> savedAmenities = [];
                   avaiableAmenities.forEach((k, v) {
                     if (v) {
                       savedAmenities.add(k);
@@ -148,7 +148,7 @@ class RoomActivityState extends State<RoomActivity> {
                   });
                   Future<bool> load;
                   load = update(
-                    API.ROOM,
+                    Config.API.ROOM,
                     Map.from({
                       'roomno': roomno.text,
                       "rent": rent.text,
@@ -157,7 +157,7 @@ class RoomActivityState extends State<RoomActivity> {
                           ? "," + savedAmenities.join(",") + ","
                           : ""
                     }),
-                    Map.from({'hostel_id': hostelID, 'id': room.id}),
+                    Map.from({'hostel_id': Config.hostelID, 'id': room.id}),
                   );
                   load.then((onValue) {
                     setState(() {
@@ -288,7 +288,7 @@ class RoomActivityState extends State<RoomActivity> {
                 child: new Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: <Widget>[
-                    new FlatButton(
+                    new TextButton(
                       child: new Text(
                         (room.filled != "0") ? "" : "DELETE",
                         style: TextStyle(color: Colors.red),
@@ -302,10 +302,10 @@ class RoomActivityState extends State<RoomActivity> {
                               loading = true;
                             });
                             Future<bool> delete = update(
-                                API.ROOM,
+                                Config.API.ROOM,
                                 Map.from({'status': '0'}),
                                 Map.from({
-                                  'hostel_id': hostelID,
+                                  'hostel_id': Config.hostelID,
                                   'id': room.id,
                                 }));
                             delete.then((response) {

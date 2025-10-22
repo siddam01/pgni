@@ -1,10 +1,10 @@
 import 'package:cloudpg/utils/config.dart';
 import 'package:flutter/material.dart';
 import 'dart:async';
-import 'package:modal_progress_hud_nsn/modal_progress_hud_nsn.dart';
+import 'package:modal_progress_hud/modal_progress_hud.dart';
 
 import '../utils/utils.dart';
-import '../utils/Config.API.dart';
+import '../utils/api.dart';
 import '../utils/models.dart';
 
 class FoodActivity extends StatefulWidget {
@@ -48,7 +48,7 @@ class FoodActivityState extends State<FoodActivity> {
         });
       } else {
         Future<Foods> data = getFoods(Map.from(
-            {'hostel_id': Config.hostelID, 'date': dateFormat.format(foodDate)}));
+            {'hostel_id': hostelID, 'date': dateFormat.format(foodDate)}));
         data.then((response) {
           if (response.foods.length > 0) {
             setState(() {
@@ -60,7 +60,7 @@ class FoodActivityState extends State<FoodActivity> {
           }
           if (response.meta.messageType == "1") {
             oneButtonDialog(context, "", response.meta.message,
-                !(response.meta.status == Config.STATUS_403));
+                !(response.meta.status == STATUS_403));
           }
           setState(() {
             loading = false;
@@ -252,14 +252,14 @@ class FoodActivityState extends State<FoodActivity> {
                       } else {
                         Future<bool> load;
                         load = update(
-                          Config.API.FOOD,
+                          API.FOOD,
                           Map.from({
                             "breakfast": breakfast.text,
                             "lunch": lunch.text,
                             "dinner": dinner.text,
                           }),
                           Map.from({
-                            'hostel_id': Config.hostelID,
+                            'hostel_id': hostelID,
                             "date": dateFormat.format(foodDate)
                           }),
                         );

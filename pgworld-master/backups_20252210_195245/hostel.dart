@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 
-import 'package:modal_progress_hud_nsn/modal_progress_hud_nsn.dart';
+import 'package:modal_progress_hud/modal_progress_hud.dart';
 
-import '../utils/Config.API.dart';
+import '../utils/api.dart';
 import '../utils/config.dart';
 import '../utils/models.dart';
 import '../utils/utils.dart';
@@ -51,7 +51,7 @@ class HostelActivityState extends State<HostelActivity> {
   }
 
   List<Widget> amenitiesWidget() {
-    List<Widget> widgets = [];
+    List<Widget> widgets = new List();
     avaiableAmenities.forEach((k, v) => widgets.add(new GestureDetector(
           onTap: () {
             setState(() {
@@ -137,7 +137,7 @@ class HostelActivityState extends State<HostelActivity> {
                     });
                   }
 
-                  List<String> savedAmenities = [];
+                  List<String> savedAmenities = new List();
                   avaiableAmenities.forEach((k, v) {
                     if (v) {
                       savedAmenities.add(k);
@@ -145,7 +145,7 @@ class HostelActivityState extends State<HostelActivity> {
                   });
                   Future<bool> load;
                   load = update(
-                    Config.API.HOSTEL,
+                    API.HOSTEL,
                     Map.from({
                       "name": name.text,
                       "address": address.text,
@@ -280,7 +280,7 @@ class HostelActivityState extends State<HostelActivity> {
                       child: new Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: <Widget>[
-                          new TextButton(
+                          new FlatButton(
                             child: new Text(
                               (hostel == null) ? "" : "DELETE",
                               style: TextStyle(color: Colors.red),
@@ -294,7 +294,7 @@ class HostelActivityState extends State<HostelActivity> {
                                     loading = true;
                                   });
                                   Future<bool> delete = update(
-                                      Config.API.HOSTEL,
+                                      API.HOSTEL,
                                       Map.from({'status': '0'}),
                                       Map.from({
                                         'id': hostel.id,

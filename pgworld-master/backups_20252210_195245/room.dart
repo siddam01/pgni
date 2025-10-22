@@ -1,82 +1,73 @@
 import 'package:flutter/material.dart';
-import 'dart:async';
 
-import 'package:modal_progress_hud_nsn/modal_progress_hud_nsn.dart';
+import 'package:modal_progress_hud/modal_progress_hud.dart';
 
-import '../utils/Config.API.dart';
+import '../utils/api.dart';
 import '../utils/config.dart';
 import '../utils/models.dart';
 import '../utils/utils.dart';
-import '../screens/dashboard.dart';
 
-class HostelActivity extends StatefulWidget {
-  final Hostel hostel;
-  final bool startup;
-  final bool only;
+class RoomActivity extends StatefulWidget {
+  final Room room;
 
-  HostelActivity(this.hostel, this.startup, this.only);
+  RoomActivity(this.room);
   @override
   State<StatefulWidget> createState() {
-    return new HostelActivityState(hostel, startup, only);
+    return new RoomActivityState(room);
   }
 }
 
-class HostelActivityState extends State<HostelActivity> {
-  TextEditingController name = new TextEditingController();
-  TextEditingController address = new TextEditingController();
-  TextEditingController phone = new TextEditingController();
+class RoomActivityState extends State<RoomActivity> {
+  TextEditingController roomno = new TextEditingController();
+  TextEditingController rent = new TextEditingController();
+  TextEditingController capacity = new TextEditingController();
 
-  Hostel hostel;
-  bool startup;
-  bool only;
+  Room room;
 
   Map<String, bool> avaiableAmenities = new Map<String, bool>();
 
   bool loading = false;
 
-  HostelActivityState(this.hostel, this.startup, this.only);
+  RoomActivityState(this.room);
 
-  bool nameCheck = false;
-  bool phoneCheck = false;
+  bool roomnoCheck = false;
+  bool rentCheck = false;
+  bool capacityCheck = false;
 
   @override
   void initState() {
     super.initState();
-    amenityTypes.forEach((amenity) => avaiableAmenities[amenity[1]] = false);
-    name.text = hostel.name;
-    address.text = hostel.address;
-    phone.text = hostel.phone;
-    hostel.amenities.split(",").forEach((amenity) =>
+    print(amenities);
+    amenities.forEach((amenity) =>
+        amenity.length > 0 ? avaiableAmenities[amenity] = false : null);
+    roomno.text = room.roomno;
+    rent.text = room.rent;
+    capacity.text = room.capacity;
+    room.amenities.split(",").forEach((amenity) =>
         amenity.length > 0 ? avaiableAmenities[amenity] = true : null);
+    print(avaiableAmenities);
   }
 
   List<Widget> amenitiesWidget() {
-    List<Widget> widgets = [];
+    List<Widget> widgets = new List();
     avaiableAmenities.forEach((k, v) => widgets.add(new GestureDetector(
           onTap: () {
             setState(() {
               avaiableAmenities[k] = !avaiableAmenities[k];
             });
           },
-          child: new Container(
-            width: MediaQuery.of(context).size.width,
-            child: new Row(
-              children: <Widget>[
-                new Checkbox(
-                  value: v,
-                  onChanged: (bool value) {
-                    setState(() {
-                      avaiableAmenities[k] = value;
-                    });
-                  },
-                ),
-                new Text(
-                  getAmenityName(k),
-                  maxLines: 4,
-                  overflow: TextOverflow.ellipsis,
-                )
-              ],
-            ),
+          child: new Row(
+            children: <Widget>[
+              new Checkbox(
+                value: v,
+                onChanged: (bool value) {
+                  setState(() {
+                    avaiableAmenities[k] = value;
+                  });
+                },
+              ),
+              new Text(getAmenityName(k))
+            ],
           ),
         )));
     return widgets;
@@ -91,7 +82,7 @@ class HostelActivityState extends State<HostelActivity> {
         ),
         backgroundColor: Colors.white,
         title: new Text(
-          "Hostel",
+          "Room",
           style: TextStyle(color: Colors.black),
         ),
         elevation: 4.0,
@@ -113,31 +104,43 @@ class HostelActivityState extends State<HostelActivity> {
                     loading = false;
                   });
                 } else {
-                  if (name.text.length == 0) {
+                  if (roomno.text.length == 0) {
                     setState(() {
-                      nameCheck = true;
+                      roomnoCheck = true;
                       loading = false;
                     });
                     return;
                   } else {
                     setState(() {
-                      nameCheck = false;
+                      roomnoCheck = false;
                     });
                   }
 
-                  if (phone.text.length == 0) {
+                  if (capacity.text.length == 0) {
                     setState(() {
-                      phoneCheck = true;
+                      capacityCheck = true;
                       loading = false;
                     });
                     return;
                   } else {
                     setState(() {
-                      phoneCheck = false;
+                      capacityCheck = false;
                     });
                   }
 
-                  List<String> savedAmenities = [];
+                  if (rent.text.length == 0) {
+                    setState(() {
+                      rentCheck = true;
+                      loading = false;
+                    });
+                    return;
+                  } else {
+                    setState(() {
+                      rentCheck = false;
+                    });
+                  }
+
+                  List<String> savedAmenities = new List();
                   avaiableAmenities.forEach((k, v) {
                     if (v) {
                       savedAmenities.add(k);
@@ -145,16 +148,16 @@ class HostelActivityState extends State<HostelActivity> {
                   });
                   Future<bool> load;
                   load = update(
-                    Config.API.HOSTEL,
+                    API.ROOM,
                     Map.from({
-                      "name": name.text,
-                      "address": address.text,
-                      "phone": phone.text,
+                      'roomno': roomno.text,
+                      "rent": rent.text,
+                      "capacity": capacity.text,
                       "amenities": savedAmenities.length > 0
                           ? "," + savedAmenities.join(",") + ","
                           : ""
                     }),
-                    Map.from({'id': hostel.id}),
+                    Map.from({'hostel_id': hostelID, 'id': room.id}),
                   );
                   load.then((onValue) {
                     setState(() {
@@ -181,23 +184,23 @@ class HostelActivityState extends State<HostelActivity> {
                 children: <Widget>[
                   new Expanded(
                     child: new Container(
-                      height: nameCheck ? null : 50,
+                      height: roomnoCheck ? null : 50,
                       child: new TextField(
-                        controller: name,
+                        controller: roomno,
                         textInputAction: TextInputAction.next,
                         keyboardType: TextInputType.text,
                         decoration: InputDecoration(
-                          suffixIcon: nameCheck
+                          suffixIcon: roomnoCheck
                               ? IconButton(
                                   icon: Icon(Icons.error, color: Colors.red),
                                   onPressed: () {},
                                 )
                               : null,
-                          errorText: nameCheck ? "Hostel Name required" : null,
+                          errorText: roomnoCheck ? "Room No. required" : null,
                           isDense: true,
-                          prefixIcon: Icon(Icons.location_city),
+                          prefixIcon: Icon(Icons.hotel),
                           border: OutlineInputBorder(),
-                          labelText: 'Hostel Name',
+                          labelText: 'Room No.',
                         ),
                         onSubmitted: (String value) {},
                       ),
@@ -206,30 +209,30 @@ class HostelActivityState extends State<HostelActivity> {
                 ],
               ),
               new Container(
-                height: phoneCheck ? null : 50,
+                height: capacityCheck ? null : 50,
                 margin: new EdgeInsets.fromLTRB(0, 15, 0, 0),
                 child: new Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  mainAxisAlignment: MainAxisAlignment.start,
                   children: <Widget>[
                     new Flexible(
                       child: new Container(
                         child: new TextField(
-                          controller: phone,
+                          controller: capacity,
                           textInputAction: TextInputAction.done,
-                          keyboardType: TextInputType.phone,
+                          keyboardType: TextInputType.number,
                           decoration: InputDecoration(
-                            suffixIcon: phoneCheck
+                            suffixIcon: capacityCheck
                                 ? IconButton(
                                     icon: Icon(Icons.error, color: Colors.red),
                                     onPressed: () {},
                                   )
                                 : null,
                             errorText:
-                                phoneCheck ? "Phone Number required" : null,
+                                capacityCheck ? "Capacity required" : null,
                             isDense: true,
-                            prefixIcon: Icon(Icons.phone),
+                            prefixIcon: Icon(Icons.group),
                             border: OutlineInputBorder(),
-                            labelText: 'Phone Number',
+                            labelText: 'Capacity',
                           ),
                           onSubmitted: (String value) {},
                         ),
@@ -239,22 +242,29 @@ class HostelActivityState extends State<HostelActivity> {
                 ),
               ),
               new Container(
+                height: rentCheck ? null : 50,
                 margin: new EdgeInsets.fromLTRB(0, 15, 0, 0),
                 child: new Row(
-                  mainAxisAlignment: MainAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: <Widget>[
                     new Flexible(
                       child: new Container(
                         child: new TextField(
-                          controller: address,
-                          maxLines: 5,
+                          controller: rent,
                           textInputAction: TextInputAction.done,
-                          keyboardType: TextInputType.text,
+                          keyboardType: TextInputType.number,
                           decoration: InputDecoration(
+                            suffixIcon: rentCheck
+                                ? IconButton(
+                                    icon: Icon(Icons.error, color: Colors.red),
+                                    onPressed: () {},
+                                  )
+                                : null,
+                            errorText: rentCheck ? "Rent required" : null,
                             isDense: true,
-                            prefixIcon: Icon(Icons.location_on),
+                            prefixIcon: Icon(Icons.attach_money),
                             border: OutlineInputBorder(),
-                            labelText: 'Address',
+                            labelText: 'Rent',
                           ),
                           onSubmitted: (String value) {},
                         ),
@@ -273,45 +283,44 @@ class HostelActivityState extends State<HostelActivity> {
                     crossAxisCount: 2,
                     children: amenitiesWidget()),
               ),
-              only
-                  ? new Container()
-                  : new Container(
-                      margin: new EdgeInsets.fromLTRB(0, 25, 0, 0),
-                      child: new Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: <Widget>[
-                          new TextButton(
-                            child: new Text(
-                              (hostel == null) ? "" : "DELETE",
-                              style: TextStyle(color: Colors.red),
-                            ),
-                            onPressed: () {
-                              Future<bool> dialog = twoButtonDialog(context,
-                                  "Do you want to delete the hostel?", "");
-                              dialog.then((onValue) {
-                                if (onValue) {
-                                  setState(() {
-                                    loading = true;
-                                  });
-                                  Future<bool> delete = update(
-                                      Config.API.HOSTEL,
-                                      Map.from({'status': '0'}),
-                                      Map.from({
-                                        'id': hostel.id,
-                                      }));
-                                  delete.then((response) {
-                                    setState(() {
-                                      loading = false;
-                                    });
-                                    Navigator.pop(context, "");
-                                  });
-                                }
-                              });
-                            },
-                          )
-                        ],
+              new Container(
+                margin: new EdgeInsets.fromLTRB(0, 25, 0, 0),
+                child: new Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: <Widget>[
+                    new FlatButton(
+                      child: new Text(
+                        (room.filled != "0") ? "" : "DELETE",
+                        style: TextStyle(color: Colors.red),
                       ),
-                    ),
+                      onPressed: () {
+                        Future<bool> dialog = twoButtonDialog(
+                            context, "Do you want to delete the room?", "");
+                        dialog.then((onValue) {
+                          if (onValue) {
+                            setState(() {
+                              loading = true;
+                            });
+                            Future<bool> delete = update(
+                                API.ROOM,
+                                Map.from({'status': '0'}),
+                                Map.from({
+                                  'hostel_id': hostelID,
+                                  'id': room.id,
+                                }));
+                            delete.then((response) {
+                              setState(() {
+                                loading = false;
+                              });
+                              Navigator.pop(context, "");
+                            });
+                          }
+                        });
+                      },
+                    )
+                  ],
+                ),
+              ),
             ],
           ),
         ),

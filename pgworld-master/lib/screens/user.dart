@@ -1,12 +1,12 @@
-import 'package:cloudpg/screens/pro.dart';
+import 'dart:io';import 'package:cloudpg/screens/pro.dart';
 import 'package:flutter/material.dart';
 import 'dart:async';
 
 import 'package:image_picker/image_picker.dart';
-import 'package:modal_progress_hud/modal_progress_hud.dart';
+import 'package:modal_progress_hud_nsn/modal_progress_hud_nsn.dart';
 
 import '../utils/utils.dart';
-import '../utils/api.dart';
+import '../utils/Config.API.dart';
 import '../utils/config.dart';
 import '../utils/models.dart';
 import './photo.dart';
@@ -45,9 +45,9 @@ class UserActivityState extends State<UserActivity> {
   String roomID;
 
   bool loading = false;
-  List<String> fileNames = new List();
-  List<Widget> fileWidgets = new List();
-  List<Room> rooms = new List();
+  List<String> fileNames = [];
+  List<Widget> fileWidgets = [];
+  List<Room> rooms = [];
 
   UserActivityState(this.user, this.room);
 
@@ -90,7 +90,7 @@ class UserActivityState extends State<UserActivity> {
         });
         Map<String, String> filter = new Map();
         filter["limit"] = "10000";
-        filter["hostel_id"] = hostelID;
+        filter["hostel_id"] = Config.hostelID;
         filter["status"] = "1";
         filter["resp"] = "roomno,id,rent";
         Future<Rooms> data = getRooms(filter);
@@ -103,7 +103,7 @@ class UserActivityState extends State<UserActivity> {
           });
           if (response.meta.messageType == "1") {
             oneButtonDialog(context, "", response.meta.message,
-                !(response.meta.status == STATUS_403));
+                !(response.meta.status == Config.STATUS_403));
           }
           setState(() {
             loading = false;
@@ -114,13 +114,13 @@ class UserActivityState extends State<UserActivity> {
   }
 
   Future getImage(ImageSource source) async {
-    var image = await ImagePicker.pickImage(source: source);
+    var image = await ImagePicker().pickImage(source: source);
 
     if (image != null) {
       setState(() {
         loading = true;
       });
-      Future<String> uploadResponse = upload(image);
+      Future<String> uploadResponse = upload(File(image.path));
       uploadResponse.then((fileName) {
         if (fileName.isNotEmpty) {
           setState(() {
@@ -147,14 +147,14 @@ class UserActivityState extends State<UserActivity> {
             child: new ListView(
               shrinkWrap: true,
               children: <Widget>[
-                new FlatButton(
+                new TextButton(
                   child: new Text("Camera"),
                   onPressed: () {
                     getImage(ImageSource.camera);
                     Navigator.of(context).pop();
                   },
                 ),
-                new FlatButton(
+                new TextButton(
                   child: new Text("Gallery"),
                   onPressed: () {
                     getImage(ImageSource.gallery);
@@ -179,13 +179,13 @@ class UserActivityState extends State<UserActivity> {
             new IconButton(
               icon: FadeInImage.assetNetwork(
                 placeholder: 'assets/image_placeholder.png',
-                image: mediaURL + file,
+                image: Config.mediaURL + file,
               ),
               onPressed: () {
                 Navigator.push(
                   context,
                   new MaterialPageRoute(
-                      builder: (context) => new PhotoActivity(mediaURL + file)),
+                      builder: (context) => new PhotoActivity(Config.mediaURL + file)),
                 );
               },
             ),
@@ -207,12 +207,12 @@ class UserActivityState extends State<UserActivity> {
     fileWidgets.add(new Row(
       children: <Widget>[
         new Expanded(
-          child: new FlatButton(
+          child: new TextButton(
             onPressed: () {
               Future<Admins> statusResponse =
-                  getStatus({"hostel_id": hostelID});
+                  getStatus({"hostel_id": Config.hostelID});
               statusResponse.then((response) {
-                if (response.meta.status != STATUS_403) {
+                if (response.meta.status != Config.STATUS_403) {
                   selectPhoto(context);
                 } else {
                   Navigator.push(
@@ -231,7 +231,7 @@ class UserActivityState extends State<UserActivity> {
   }
 
   Future _selectDate(BuildContext context) async {
-    DateTime picked = await showDatePicker(
+    DateTime? picked = await showDatePicker(
         context: context,
         initialDate: new DateTime.now().add(new Duration(days: 5)),
         firstDate: new DateTime.now().subtract(new Duration(days: 365)),
@@ -262,7 +262,7 @@ class UserActivityState extends State<UserActivity> {
               shrinkWrap: true,
               itemCount: rooms.length,
               itemBuilder: (context, i) {
-                return new FlatButton(
+                return new TextButton(
                   child: new Text(rooms[i].roomno),
                   onPressed: () {
                     Navigator.of(context).pop();
@@ -330,7 +330,7 @@ class UserActivityState extends State<UserActivity> {
 
                   Future<bool> load;
                   load = update(
-                    API.USER,
+                    Config.API.USER,
                     Map.from({
                       'name': name.text,
                       'phone': phone.text,
@@ -345,7 +345,7 @@ class UserActivityState extends State<UserActivity> {
                       'prev_room_id': user.roomID,
                       'joining_date_time': pickedJoiningDate,
                     }),
-                    Map.from({'hostel_id': hostelID, 'id': user.id}),
+                    Map.from({'hostel_id': Config.hostelID, 'id': user.id}),
                   );
                   load.then((onValue) {
                     setState(() {
@@ -697,7 +697,7 @@ class UserActivityState extends State<UserActivity> {
                 child: new Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: <Widget>[
-                    new FlatButton(
+                    new TextButton(
                       child: new Text(
                         "REMOVE",
                         style: TextStyle(color: Colors.red),
@@ -711,9 +711,9 @@ class UserActivityState extends State<UserActivity> {
                               loading = true;
                             });
                             Future<bool> deleteResquest = delete(
-                                API.USER,
+                                Config.API.USER,
                                 Map.from({
-                                  'hostel_id': hostelID,
+                                  'hostel_id': Config.hostelID,
                                   'id': user.id,
                                   'room_id': user.roomID,
                                   'vacating': user.vacating,
