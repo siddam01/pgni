@@ -70,13 +70,13 @@ class BillActivityState extends State<BillActivity> {
     paidDate.text = headingDateFormat.format(new DateTime.now());
     pickedPaidDate = dateFormat.format(new DateTime.now());
     fileNames = bill.document.split(",");
-    selectedType = bill.type;
+      selectedType = bill.type;
     type.text = getBillType(bill.type);
-    selectedPayment = bill.payment;
+      selectedPayment = bill.payment;
     payment.text = getPaymentType(bill.payment);
-    transactionID.text = bill.transactionID;
-    billID.text = bill.billID;
-    amount.text = bill.amount;
+      transactionID.text = bill.transactionID;
+      billID.text = bill.billID;
+      amount.text = bill.amount;
     paidDate.text = headingDateFormat.format(DateTime.parse(bill.paidDateTime));
     pickedPaidDate = dateFormat.format(DateTime.parse(bill.paidDateTime));
     loadDocuments();
