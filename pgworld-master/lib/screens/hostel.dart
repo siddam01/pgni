@@ -7,7 +7,6 @@ import '../utils/api.dart';
 import '../utils/config.dart';
 import '../utils/models.dart';
 import '../utils/utils.dart';
-import '../screens/dashboard.dart';
 
 class HostelActivity extends StatefulWidget {
   final Hostel hostel;
@@ -26,11 +25,11 @@ class HostelActivityState extends State<HostelActivity> {
   TextEditingController address = new TextEditingController();
   TextEditingController phone = new TextEditingController();
 
-  Hostel hostel;
+  Hostel? hostel;
   bool startup;
   bool only;
 
-  Map<String, bool> avaiableAmenities = new Map<String, bool>();
+  Map<String, bool> avaiableAmenities = <String, bool>{};
 
   bool loading = false;
 
@@ -42,12 +41,25 @@ class HostelActivityState extends State<HostelActivity> {
   @override
   void initState() {
     super.initState();
-    amenityTypes.forEach((amenity) => avaiableAmenities[amenity[1]] = false);
-    name.text = hostel.name;
-    address.text = hostel.address;
-    phone.text = hostel.phone;
-    hostel.amenities.split(",").forEach((amenity) =>
-        amenity.length > 0 ? avaiableAmenities[amenity] = true : null);
+    
+    // Initialize amenities from Config
+    Config.amenityTypes.forEach((amenity) => avaiableAmenities[amenity] = false);
+    
+    // Set hostel data if editing (null check for new hostel)
+    if (hostel != null) {
+      name.text = hostel!.name ?? '';
+      address.text = hostel!.address ?? '';
+      phone.text = hostel!.phone ?? '';
+      
+      // Parse amenities
+      if (hostel!.amenities != null && hostel!.amenities!.isNotEmpty) {
+        hostel!.amenities!.split(",").forEach((amenity) {
+          if (amenity.length > 0) {
+            avaiableAmenities[amenity] = true;
+          }
+        });
+      }
+    }
   }
 
   List<Widget> amenitiesWidget() {
@@ -64,9 +76,9 @@ class HostelActivityState extends State<HostelActivity> {
               children: <Widget>[
                 new Checkbox(
                   value: v,
-                  onChanged: (bool value) {
+                  onChanged: (bool? value) {
                     setState(() {
-                      avaiableAmenities[k] = value;
+                      avaiableAmenities[k] = value ?? false;
                     });
                   },
                 ),
@@ -145,7 +157,7 @@ class HostelActivityState extends State<HostelActivity> {
                   });
                   Future<bool> load;
                   load = update(
-                    Config.API.HOSTEL,
+                    API.HOSTEL,
                     Map.from({
                       "name": name.text,
                       "address": address.text,
@@ -154,7 +166,7 @@ class HostelActivityState extends State<HostelActivity> {
                           ? "," + savedAmenities.join(",") + ","
                           : ""
                     }),
-                    Map.from({'id': hostel.id}),
+                    hostel != null ? Map.from({'id': hostel!.id}) : Map.from({}),
                   );
                   load.then((onValue) {
                     setState(() {
@@ -286,6 +298,8 @@ class HostelActivityState extends State<HostelActivity> {
                               style: TextStyle(color: Colors.red),
                             ),
                             onPressed: () {
+                              if (hostel == null) return;
+                              
                               Future<bool> dialog = twoButtonDialog(context,
                                   "Do you want to delete the hostel?", "");
                               dialog.then((onValue) {
@@ -294,10 +308,10 @@ class HostelActivityState extends State<HostelActivity> {
                                     loading = true;
                                   });
                                   Future<bool> delete = update(
-                                      Config.API.HOSTEL,
+                                      API.HOSTEL,
                                       Map.from({'status': '0'}),
                                       Map.from({
-                                        'id': hostel.id,
+                                        'id': hostel!.id,
                                       }));
                                   delete.then((response) {
                                     setState(() {

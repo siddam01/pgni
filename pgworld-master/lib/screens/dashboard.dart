@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../utils/api.dart';
 import '../utils/models.dart';
 
+import './hostels.dart';
 import './rooms.dart';
 import './logs.dart';
 import './users.dart';
@@ -24,10 +25,10 @@ class DashBoardActivity extends StatefulWidget {
 class DashBoardActivityState extends State<DashBoardActivity> {
   FocusNode textSecondFocusNode = new FocusNode();
 
-  Dashboard dashboard;
-  List<Graph> graphs;
+  Dashboard? dashboard;
+  List<Graph>? graphs;
 
-  String hostelId;
+  String? hostelId;
 
   List<Widget> widgets = [];
 
@@ -35,7 +36,7 @@ class DashBoardActivityState extends State<DashBoardActivity> {
   void initState() {
     super.initState();
 
-    hostelId = hostelID;
+    hostelId = Config.hostelID;
 
     fillData();
   }
@@ -47,7 +48,7 @@ class DashBoardActivityState extends State<DashBoardActivity> {
         oneButtonDialog(context, "No Internet connection", "", true);
       } else {
         Map<String, String> filter = new Map();
-        filter["hostel_id"] = hostelID;
+        filter["hostel_id"] = Config.hostelID ?? '';
         Future<Dashboards> data = getDashboards(filter);
         data.then((response) {
           if (response.dashboards.length > 0) {
@@ -59,7 +60,7 @@ class DashBoardActivityState extends State<DashBoardActivity> {
           }
           if (response.meta.messageType == "1") {
             oneButtonDialog(context, "", response.meta.message,
-                !(response.meta.status == STATUS_403));
+                !(response.meta.status == Config.STATUS_403));
           }
         });
       }
@@ -158,8 +159,8 @@ class DashBoardActivityState extends State<DashBoardActivity> {
       context,
       MaterialPageRoute(builder: (context) => page),
     ) as String;
-    if (hostelId != hostelID) {
-      hostelId = hostelID;
+    if (hostelId != Config.hostelID) {
+      hostelId = Config.hostelID;
       fillData();
     }
   }
@@ -170,7 +171,9 @@ class DashBoardActivityState extends State<DashBoardActivity> {
         appBar: new AppBar(
           backgroundColor: Colors.white,
           title: new Text(
-            hostelName.length > 0 ? hostelName : "DashBoard",
+            prefs.getString('hostel_name') != null && prefs.getString('hostel_name')!.isNotEmpty 
+                ? prefs.getString('hostel_name')! 
+                : "DashBoard",
             style: TextStyle(color: Colors.black),
           ),
           elevation: 4.0,
@@ -390,6 +393,53 @@ class DashBoardActivityState extends State<DashBoardActivity> {
                               context,
                               new MaterialPageRoute(
                                   builder: (context) => new NotesActivity()),
+                            );
+                          },
+                        ),
+                        new GestureDetector(
+                          child: new Card(
+                            child: new Container(
+                              margin: EdgeInsets.fromLTRB(0, 0, 0, 10),
+                              child: new Column(
+                                mainAxisAlignment: MainAxisAlignment.start,
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: <Widget>[
+                                  new Expanded(
+                                    child: new Container(
+                                      padding: EdgeInsets.all(10),
+                                      decoration: new BoxDecoration(
+                                        color: HexColor("#FF9800"), // Orange
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: new Icon(
+                                        Icons.business,
+                                        size: 25,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                  new Text(
+                                    "Hostels",
+                                    style: TextStyle(
+                                      fontSize: 25,
+                                      color: Colors.black,
+                                    ),
+                                  ),
+                                  new Text("Manage Hostels",
+                                      style: new TextStyle(
+                                        fontSize: 17,
+                                        color: Colors.grey,
+                                      )),
+                                ],
+                              ),
+                            ),
+                          ),
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              new MaterialPageRoute(
+                                  builder: (context) =>
+                                      new HostelsActivity()),
                             );
                           },
                         ),
@@ -649,9 +699,9 @@ class DashBoardActivityState extends State<DashBoardActivity> {
                           ),
                           onTap: () {
                             Future<Admins> statusResponse =
-                                getStatus({"hostel_id": hostelID});
+                                getStatus({"hostel_id": Config.hostelID ?? ''});
                             statusResponse.then((response) {
-                              if (response.meta.status != STATUS_403) {
+                              if (response.meta.status != Config.STATUS_403) {
                                 Navigator.push(
                                   context,
                                   new MaterialPageRoute(

@@ -2,7 +2,7 @@ import 'package:cloudpg/screens/pro.dart';
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:flutter_slidable/flutter_slidable.dart';
-import 'package:modal_progress_hud/modal_progress_hud.dart';
+import 'package:modal_progress_hud_nsn/modal_progress_hud_nsn.dart';
 
 import './hostel.dart';
 import '../utils/models.dart';
@@ -20,10 +20,14 @@ class HostelsActivity extends StatefulWidget {
 }
 
 class HostelsActivityState extends State<HostelsActivity> {
-  List<Hostel> hostels = new List();
+  List<Hostel> hostels = <Hostel>[];
 
   double width = 0;
-  String hostelIDs;
+  String? hostelIDs;
+  
+  // Admin info variables
+  String? adminName;
+  String? adminEmailID;
 
   bool loading = true;
 
@@ -32,6 +36,9 @@ class HostelsActivityState extends State<HostelsActivity> {
   @override
   void initState() {
     super.initState();
+    // Initialize admin info from SharedPreferences
+    adminName = prefs.getString('name');
+    adminEmailID = prefs.getString('email_id');
     getUserData();
   }
 
@@ -45,8 +52,8 @@ class HostelsActivityState extends State<HostelsActivity> {
           loading = true;
         });
         Future<Admins> adminResponse = getAdmins(Map.from({
-          'username': adminName,
-          'email': adminEmailID,
+          'username': adminName ?? '',
+          'email': adminEmailID ?? '',
         }));
         adminResponse.then((response) {
           if (response.meta.status != "200") {
@@ -86,7 +93,7 @@ class HostelsActivityState extends State<HostelsActivity> {
           }
           if (response.meta.messageType == "1") {
             oneButtonDialog(context, "", response.meta.message,
-                !(response.meta.status == STATUS_403));
+                !(response.meta.status == Config.STATUS_403));
           }
           setState(() {
             loading = false;
@@ -124,9 +131,9 @@ class HostelsActivityState extends State<HostelsActivity> {
               ? new IconButton(
                   onPressed: () {
                     Future<Admins> statusResponse =
-                        getStatus({"hostel_id": hostelID});
+                        getStatus({"hostel_id": Config.hostelID ?? ''});
                     statusResponse.then((response) {
-                      if (response.meta.status != STATUS_403) {
+                      if (response.meta.status != Config.STATUS_403) {
                         addPage(
                             context,
                             new HostelActivity(
@@ -190,8 +197,8 @@ class HostelsActivityState extends State<HostelsActivity> {
                                                           DateTime.now())
                                                       .inDays >
                                                   0
-                                          ? HexColor(COLORS.GREEN)
-                                          : HexColor(COLORS.RED),
+                                          ? HexColor("#4CAF50") // Green
+                                          : HexColor("#F44336"), // Red
                                       shape: BoxShape.rectangle,
                                     ),
                                     child: new Text(
