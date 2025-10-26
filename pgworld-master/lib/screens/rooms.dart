@@ -11,6 +11,7 @@ import '../utils/api.dart';
 import '../utils/models.dart';
 import '../utils/config.dart';
 import '../utils/utils.dart';
+import '../utils/permission_service.dart';
 
 class RoomsActivity extends StatefulWidget {
   @override
@@ -189,14 +190,16 @@ class RoomsActivityState extends State<RoomsActivity> {
                 Icons.filter_list,
               ),
             ),
-            new IconButton(
-              onPressed: () {
-                addPage(context, new RoomActivity(null));
-              },
-              icon: new Icon(
-                Icons.add,
+            // Only show Add button if user has permission to manage rooms
+            if (PermissionService.hasPermission(PermissionService.PERMISSION_MANAGE_ROOMS))
+              new IconButton(
+                onPressed: () {
+                  addPage(context, new RoomActivity(null));
+                },
+                icon: new Icon(
+                  Icons.add,
+                ),
               ),
-            ),
           ],
         ),
         body: ModalProgressHUD(

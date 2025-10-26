@@ -7,6 +7,7 @@ import '../utils/models.dart';
 import '../utils/api.dart';
 import '../utils/config.dart';
 import '../utils/utils.dart';
+import '../utils/permission_service.dart';
 
 class NoticesActivity extends StatefulWidget {
   NoticesActivity();
@@ -127,12 +128,14 @@ class NoticesActivityState extends State<NoticesActivity> {
           style: TextStyle(color: Colors.black),
         ),
         actions: <Widget>[
-          new IconButton(
-            onPressed: () {
-              addPage(context, new NoticeActivity(null));
-            },
-            icon: new Icon(Icons.add),
-          )
+          // Only show Add button if user has permission to manage notices
+          if (PermissionService.hasPermission(PermissionService.PERMISSION_MANAGE_NOTICES))
+            new IconButton(
+              onPressed: () {
+                addPage(context, new NoticeActivity(null));
+              },
+              icon: new Icon(Icons.add),
+            )
         ],
       ),
       body: ModalProgressHUD(

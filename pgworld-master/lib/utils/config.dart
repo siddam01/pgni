@@ -58,16 +58,43 @@
   static const String API_ROOM = '/rooms';
   static const String API_FOOD = '/food';
   static const String API_STATUS = '/status';
+  
+  // RBAC endpoints
+  static const String API_PERMISSIONS_GET = '/permissions/get';
+  static const String API_PERMISSIONS_CHECK = '/permissions/check';
+  static const String API_MANAGER_LIST = '/manager/list';
+  static const String API_MANAGER_INVITE = '/manager/invite';
+  static const String API_MANAGER_PERMISSIONS = '/manager/permissions';
+  static const String API_MANAGER_REMOVE = '/manager/remove';
 }
 
 // API endpoints class (for backward compatibility)
 class API {
-  static const String BILL = '/bills';
-  static const String USER = '/users';
-  static const String EMPLOYEE = '/employees';
-  static const String NOTICE = '/notices';
-  static const String HOSTEL = '/hostels';
-  static const String ROOM = '/rooms';
+  static const String URL = Config.URL;
+  static const String BILL = '/bill';
+  static const String USER = '/user';
+  static const String EMPLOYEE = '/employee';
+  static const String NOTICE = '/notice';
+  static const String HOSTEL = '/hostel';
+  static const String ROOM = '/room';
   static const String FOOD = '/food';
   static const String STATUS = '/status';
+  static const String ADMIN = '/admin';
+  static const String DASHBOARD = '/dashboard';
+  static const String INVOICE = '/invoice';
+  static const String ISSUE = '/issue';
+  static const String LOG = '/log';
+  static const String NOTE = '/note';
+  static const String REPORT = '/report';
+  static const String SIGNUP = '/signup';
+  static const String SUPPORT = '/support';
+  static const String UPLOAD = '/upload';
+  
+  // RBAC endpoints
+  static const String PERMISSIONS_GET = '/permissions/get';
+  static const String PERMISSIONS_CHECK = '/permissions/check';
+  static const String MANAGER_LIST = '/manager/list';
+  static const String MANAGER_INVITE = '/manager/invite';
+  static const String MANAGER_PERMISSIONS = '/manager/permissions';
+  static const String MANAGER_REMOVE = '/manager/remove';
 }

@@ -1,0 +1,59 @@
+============================================
+🚀 HOSTELS MODULE - DEPLOYMENT COMMANDS
+============================================
+
+STEP 1: CONNECT TO EC2
+-----------------------
+Use one of these methods:
+
+A) Git Bash (Recommended for Windows):
+   ssh ec2-user@54.227.101.30
+
+B) PuTTY:
+   - Host: 54.227.101.30
+   - User: ec2-user
+   - Use your private key
+
+C) AWS Systems Manager (SSM):
+   - Go to EC2 Console
+   - Select your instance
+   - Click "Connect" → "Session Manager"
+
+
+STEP 2: RUN DEPLOYMENT COMMANDS
+--------------------------------
+Copy and paste these commands one by one:
+
+cd /home/ec2-user/pgworld-master
+git pull origin main
+cd pgworld-master
+flutter clean
+flutter pub get
+flutter build web --release --base-href="/admin/" --no-source-maps
+sudo rm -rf /usr/share/nginx/html/admin/*
+sudo cp -r build/web/* /usr/share/nginx/html/admin/
+sudo chown -R nginx:nginx /usr/share/nginx/html/admin
+sudo chmod -R 755 /usr/share/nginx/html/admin
+sudo systemctl reload nginx
+
+
+STEP 3: VERIFY DEPLOYMENT
+--------------------------
+curl -I http://localhost/admin/
+
+Expected output:
+HTTP/1.1 200 OK
+
+
+STEP 4: TEST IN BROWSER
+------------------------
+Open: http://54.227.101.30/admin/
+Login with admin credentials
+Look for orange "Hostels" card
+Click it and test functionality
+
+
+============================================
+✅ EXPECTED BUILD TIME: 5-10 minutes
+============================================
+

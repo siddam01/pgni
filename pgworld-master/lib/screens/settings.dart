@@ -9,8 +9,10 @@ import 'package:modal_progress_hud/modal_progress_hud.dart';
 import '../utils/utils.dart';
 import '../utils/config.dart';
 import '../utils/models.dart';
+import '../utils/permission_service.dart';
 import './login.dart';
 import './support.dart';
+import './managers.dart';
 
 class SettingsActivity extends StatefulWidget {
   SettingsActivity();
@@ -330,8 +332,70 @@ class SettingsActivityState extends State<SettingsActivity> {
                     new Container(
                       height: 30,
                     ),
+                    // Team Management Section (Owners only)
+                    if (PermissionService.isOwner()) ...[
+                      new Container(
+                        margin: EdgeInsets.fromLTRB(0, 20, 0, 20),
+                        child: new Text(
+                          "TEAM MANAGEMENT",
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 25,
+                          ),
+                        ),
+                      ),
+                      new GestureDetector(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => ManagersActivity(),
+                            ),
+                          );
+                        },
+                        child: new Container(
+                          color: Colors.transparent,
+                          height: 50,
+                          child: new Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: <Widget>[
+                              new Icon(Icons.people, color: Colors.blue),
+                              new Container(width: 20),
+                              new Expanded(
+                                child: new Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    new Text(
+                                      "Managers",
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    new Text(
+                                      "Manage your team members",
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.grey,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              new Icon(
+                                Icons.arrow_right,
+                                color: Colors.grey,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      new Divider(),
+                      new Container(height: 20),
+                    ],
                     new Container(
-                      margin: EdgeInsets.fromLTRB(0, 40, 0, 20),
+                      margin: EdgeInsets.fromLTRB(0, 20, 0, 20),
                       child: new Text(
                         "GET IN TOUCH",
                         style: TextStyle(

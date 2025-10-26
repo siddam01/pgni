@@ -6,6 +6,7 @@ import 'package:modal_progress_hud_nsn/modal_progress_hud_nsn.dart';
 import '../utils/utils.dart';
 import '../utils/api.dart';
 import '../utils/models.dart';
+import '../utils/permission_service.dart';
 
 class FoodActivity extends StatefulWidget {
   FoodActivity();

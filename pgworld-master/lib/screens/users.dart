@@ -11,6 +11,7 @@ import '../utils/models.dart';
 import '../utils/api.dart';
 import '../utils/config.dart';
 import '../utils/utils.dart';
+import '../utils/permission_service.dart';
 
 class UsersActivity extends StatefulWidget {
   final Room room;
@@ -236,12 +237,14 @@ class UsersActivityState extends State<UsersActivity> {
           //   icon: new Icon(Icons.mail),
           // ),
           new Container(),
-          new IconButton(
-            onPressed: () {
-              addPage(context, new UserActivity(null, room));
-            },
-            icon: new Icon(Icons.add),
-          )
+          // Only show Add button if user has permission to manage tenants
+          if (PermissionService.hasPermission(PermissionService.PERMISSION_MANAGE_TENANTS))
+            new IconButton(
+              onPressed: () {
+                addPage(context, new UserActivity(null, room));
+              },
+              icon: new Icon(Icons.add),
+            )
         ],
       ),
       body: ModalProgressHUD(

@@ -1,229 +1,898 @@
-# Flutter DevOps Engineer - Workspace Instructions
+# PGNI Application Development Rules
+# PG/Hostel Management System - Admin & Tenant Portals
 
-You are a **Senior Flutter DevOps Engineer** responsible for managing and optimizing Flutter web deployment for the PGNI app (Admin & Tenant modules) on AWS EC2.
+## 🎯 Project Overview
 
-## 🎯 Primary Goal
-
-Build and deploy Flutter web apps (Admin and Tenant) end-to-end on EC2 with:
-- ✅ Minimal build time (target: <10 minutes)
-- ✅ Zero runtime issues (100% success rate)
-- ✅ No manual intervention during deployment
-
----
-
-## 📋 Pre-Deployment Checks (ALWAYS RUN FIRST)
-
-### 1. SDK Version Verification
-Required versions: Flutter ≥ 3.24.x, Dart ≥ 3.4.x
-
-Commands: `flutter --version` and `dart --version`
-
-Action: If versions are lower, STOP and warn user. Provide upgrade command. DO NOT PROCEED until upgraded.
-
-### 2. EC2 Resource Check
-Check: `nproc`, `free -h`, `df -h /home`
-
-Minimum: t3.large (2 vCPU, 8GB RAM, 30GB disk) recommended
-Acceptable: t3.medium (2 vCPU, 4GB RAM)
-Too Low: t3.micro, t3.small
-
-Action: If below recommended, warn user and apply memory-constrained build flags.
-
-### 3. Dependency Analysis
-Run: `flutter pub outdated` in both pgworld-master and pgworldtenant-master
-
-Action: Report updates, warn about breaking changes, ask user before major upgrades.
-
-### 4. Smart Dependency Update
-Check if pubspec.yaml changed using md5sum. Only run `flutter clean` if dependencies changed.
-Use `flutter pub get --offline` when possible.
-Cache .pub-cache and .dart_tool between builds.
+This is a **Flutter + Go** full-stack application for PG/Hostel management with:
+- **Admin Portal** (pgworld-master) - Property owners & managers
+- **Tenant Portal** (pgworldtenant-master) - Residents
+- **Backend API** (pgworld-api-master) - Go + MySQL + AWS
 
 ---
 
-## 🚀 Build Optimization Rules (CRITICAL)
+## 🏗️ Architecture Guidelines
 
-### 1. Optimized Build Commands
+### Backend (Go)
+- RESTful API with gorilla/mux
+- MySQL database with proper indexing
+- S3 for file uploads
+- JWT/Session-based authentication
+- RBAC (Role-Based Access Control) with owner/manager roles
+- All endpoints follow pattern: GET (list/read), POST (create), PUT (update), DELETE (soft delete)
 
-Note: Flutter 3.19+ removed --web-renderer flag (auto-detects renderer now)
-Note: Flutter 3.35+ changed --wasm flag to boolean (--no-wasm to disable)
+### Frontend (Flutter)
+- Material Design with custom theming
+- Responsive layouts (mobile + web)
+- State management using setState (upgrade to Provider/Riverpod for complex state)
+- Shared preferences for local storage
+- HTTP package for API calls
+- Proper error handling and loading states
 
-Standard (≥4GB RAM):
-```bash
-flutter build web --release --no-source-maps --dart-define=dart.vm.product=true
+### Database Schema
+- Use soft deletes (status field: '1' active, '0' inactive)
+- Timestamps: created_at, updated_at
+- Foreign keys with proper constraints
+- Indexed fields: id, hostel_id, user_id, email
+
+---
+
+## 🔐 RBAC Implementation Rules
+
+### 1. Backend Permission Checks (CRITICAL)
+
+**ALWAYS check permissions before allowing operations:**
+
+```go
+// Check if user has permission for this operation
+func checkPermission(adminID, hostelID, permission string) bool {
+    var role string
+    db.QueryRow("SELECT role FROM admins WHERE id = ?", adminID).Scan(&role)
+    
+    if role == "owner" {
+        return true // Owners have all permissions
+    }
+    
+    var hasPermission bool
+    query := "SELECT " + permission + " FROM admin_permissions WHERE admin_id = ? AND hostel_id = ? AND status = '1'"
+    db.QueryRow(query, adminID, hostelID).Scan(&hasPermission)
+    return hasPermission
+}
 ```
 
-Memory-constrained (<4GB RAM) - Use JS instead of WASM:
-```bash
-flutter build web --release --no-wasm --no-source-maps --no-tree-shake-icons --dart-define=dart.vm.product=true
+**Permissions available:**
+- `can_view_dashboard` - View analytics
+- `can_manage_rooms` - Add/edit/delete rooms
+- `can_manage_tenants` - Add/edit/remove tenants
+- `can_manage_bills` - Create/edit bills
+- `can_view_financials` - View revenue/expenses
+- `can_manage_employees` - Add/edit/remove staff
+- `can_view_reports` - Generate reports
+- `can_manage_notices` - Post notices
+- `can_manage_issues` - Handle complaints
+- `can_manage_payments` - Process payments
+
+**Apply checks to ALL protected endpoints:**
+```go
+func RoomAdd(w http.ResponseWriter, r *http.Request) {
+    adminID := r.FormValue("admin_id")
+    hostelID := r.FormValue("hostel_id")
+    
+    if !checkPermission(adminID, hostelID, "can_manage_rooms") {
+        SetReponseStatus(w, r, statusCodeForbidden, "Permission denied", dialogType, response)
+        return
+    }
+    // ... proceed with room creation
+}
 ```
 
-### 2. Avoid Full Clean Builds
-NEVER run `flutter clean` by default. ONLY clean when:
-- Dependencies changed (pubspec.yaml modified)
-- Build errors occur
-- User explicitly requests full rebuild
+### 2. Frontend Permission Checks
 
-### 3. Caching Strategy
-Preserve between builds:
-- ~/.pub-cache (Dart packages)
-- ~/.flutter (Flutter SDK cache)
-- .dart_tool/ (per-project cache)
-- build/ (for incremental builds)
+**Fetch and cache user permissions on login:**
 
-Set: `export PUB_CACHE=/home/ec2-user/.pub-cache`
-
----
-
-## 💾 Deployment Rules
-
-### 1. Deploy to Nginx
-Copy build/web output to /usr/share/nginx/html/admin and /usr/share/nginx/html/tenant
-Set ownership: `sudo chown -R nginx:nginx /usr/share/nginx/html`
-Set permissions: `sudo chmod -R 755 /usr/share/nginx/html`
-
-### 2. Verify Critical Files
-Must exist:
-- /usr/share/nginx/html/admin/index.html
-- /usr/share/nginx/html/admin/main.dart.js
-- /usr/share/nginx/html/tenant/index.html
-- /usr/share/nginx/html/tenant/main.dart.js
-
-### 3. Memory-Constrained Deployment
-If build fails due to OOM, suggest temporary instance upgrade to t3.large, run build, then downgrade.
-Only suggest upgrade if: OOM errors, dart2js crashes, or build >20 minutes.
-
----
-
-## 🧠 Post-Deployment Validation (MANDATORY)
-
-### 1. HTTP Status Check
-Test all endpoints:
-- `curl -f http://34.227.111.143/admin/`
-- `curl -f http://34.227.111.143/tenant/`
-- `curl -f http://34.227.111.143:8080/health`
-
-Action: If any fail, rollback, check Nginx logs, investigate build output.
-
-### 2. Service Health Check
-Check: `sudo systemctl status nginx`
-Verify JS files: `curl -s http://34.227.111.143/admin/main.dart.js | head -5`
-
-### 3. Performance Logging
-Log: Build time, Admin size, Tenant size
-Track trends: Build time up? Bundle size increasing? Deployment >15 min?
-
----
-
-## ⚡ Performance Targets
-
-Build Time:
-- First build (cold): <12 min (acceptable)
-- Incremental build: <7 min (optimal)
-- Incremental build: 7-10 min (check cache)
-- Incremental build: >10 min (upgrade or investigate)
-
-Deployment Success: 100% target
-Manual Intervention: Zero (fully automated)
-
----
-
-## 🔧 Troubleshooting Guide
-
-dart2js crashes:
-1. Check memory: `free -h`
-2. If <2GB: `export DART_VM_OPTIONS="--old_gen_heap_size=2048"`
-3. Still fails: Use HTML renderer
-4. Last resort: Upgrade to t3.large
-
-Build >15 minutes:
-1. Check CPU: `top`
-2. Check disk I/O: `iostat -x 1 5`
-3. High I/O: Upgrade EBS gp2 to gp3
-4. Low CPU: Check network (pub.dev)
-
-HTTP 404:
-1. Test Nginx: `sudo nginx -t`
-2. Check permissions: `ls -la /usr/share/nginx/html/admin`
-3. Check logs: `sudo tail -50 /var/log/nginx/error.log`
-
-JS files broken:
-1. Check MIME types in /etc/nginx/mime.types
-2. Add correct types to Nginx config
-3. Reload: `sudo systemctl reload nginx`
-
----
-
-## 📂 Key File Locations
-
-Project: /home/ec2-user/pgni/
-- pgworld-master/ (Admin app)
-- pgworldtenant-master/ (Tenant app)
-- logs/ (Deployment logs)
-
-Deployment: /usr/share/nginx/html/
-- admin/
-- tenant/
-
-Cache: /home/ec2-user/.pub-cache, ~/.flutter, .dart_tool
-
----
-
-## 🎬 Deployment Commands
-
-### Complete Infrastructure-Aware Deployment (RECOMMENDED):
-```bash
-cd /home/ec2-user && curl -O https://raw.githubusercontent.com/siddam01/pgni/main/deploy_pgni_complete.sh && chmod +x deploy_pgni_complete.sh && ./deploy_pgni_complete.sh
+```dart
+class PermissionService {
+  static Map<String, dynamic>? _permissions;
+  
+  static Future<void> loadPermissions(String adminId, String hostelId) async {
+    final response = await getPermissions({'admin_id': adminId, 'hostel_id': hostelId});
+    _permissions = response.data;
+    await prefs.setString('permissions', jsonEncode(_permissions));
+  }
+  
+  static bool hasPermission(String permission) {
+    if (_permissions == null) {
+      final cached = prefs.getString('permissions');
+      if (cached != null) _permissions = jsonDecode(cached);
+    }
+    
+    // Owners have all permissions
+    if (_permissions?['role'] == 'owner') return true;
+    
+    return _permissions?[permission] ?? false;
+  }
+}
 ```
 
-This script handles: infrastructure validation, health checks, auto-swap creation, intelligent builds, deployment, comprehensive validation, performance logging.
+**Hide UI elements based on permissions:**
 
-### Standard Deployment (Fast):
-```bash
-cd /home/ec2-user && curl -O https://raw.githubusercontent.com/siddam01/pgni/main/deploy_pgni_web.sh && chmod +x deploy_pgni_web.sh && ./deploy_pgni_web.sh
+```dart
+// Example: Show "Add Room" button only if user has permission
+if (PermissionService.hasPermission('can_manage_rooms'))
+  IconButton(
+    icon: Icon(Icons.add),
+    onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => AddRoomScreen())),
+  ),
 ```
 
-This script handles: pre-checks, intelligent builds, deployment, validation, logging.
+**Show permission denied messages:**
+```dart
+if (!PermissionService.hasPermission('can_manage_bills')) {
+  showDialog(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: Text('Permission Denied'),
+      content: Text('You do not have permission to manage bills. Contact your administrator.'),
+      actions: [TextButton(onPressed: () => Navigator.pop(context), child: Text('OK'))],
+    ),
+  );
+  return;
+}
+```
 
 ---
 
-## 🚨 When to Ask User
+## 📱 UI/UX Best Practices
 
-ALWAYS ask before:
-- Upgrading Flutter/Dart SDK
-- Upgrading EC2 instance type
-- Updating major dependencies
-- Running `flutter clean` on stable build
+### 1. Responsive Design
+- Use `MediaQuery.of(context).size.width` for responsive layouts
+- Breakpoints: mobile (<600), tablet (600-1200), desktop (>1200)
+- Use `LayoutBuilder` for complex responsive widgets
+- Test on multiple screen sizes (mobile, tablet, web)
 
-NEVER ask for:
-- Running standard deployment
-- Incremental builds
-- Minor updates
-- Log cleanup
+### 2. Loading States
+- ALWAYS show loading indicators during async operations
+- Use `ModalProgressHUD` for full-screen blocking operations
+- Use `CircularProgressIndicator` for inline loading
+- Disable buttons during API calls to prevent double-submission
+
+```dart
+bool _isLoading = false;
+
+ElevatedButton(
+  onPressed: _isLoading ? null : () async {
+    setState(() => _isLoading = true);
+    try {
+      await saveData();
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  },
+  child: _isLoading ? CircularProgressIndicator(color: Colors.white) : Text('Save'),
+)
+```
+
+### 3. Error Handling
+- Display user-friendly error messages
+- Log technical errors for debugging
+- Provide retry options for network failures
+- Validate inputs before API calls
+
+```dart
+try {
+  final response = await api.createUser(userData);
+  if (response.meta.status == "200") {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('User created successfully'), backgroundColor: Colors.green),
+    );
+  } else {
+    throw Exception(response.meta.message);
+  }
+} catch (e) {
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+  );
+}
+```
+
+### 4. Form Validation
+- Validate all inputs before submission
+- Show inline error messages
+- Use `GlobalKey<FormState>` for form validation
+- Provide clear validation rules to users
+
+```dart
+final _formKey = GlobalKey<FormState>();
+
+Form(
+  key: _formKey,
+  child: Column(
+    children: [
+      TextFormField(
+        decoration: InputDecoration(labelText: 'Email'),
+        validator: (value) {
+          if (value == null || value.isEmpty) return 'Email is required';
+          if (!value.contains('@')) return 'Invalid email format';
+          return null;
+        },
+      ),
+      ElevatedButton(
+        onPressed: () {
+          if (_formKey.currentState!.validate()) {
+            _formKey.currentState!.save();
+            // Submit form
+          }
+        },
+        child: Text('Submit'),
+      ),
+    ],
+  ),
+)
+```
+
+### 5. Navigation Best Practices
+- Use named routes for complex apps
+- Pass data via constructor parameters or RouteSettings
+- Use `Navigator.pop(result)` to return data
+- Implement proper back button handling
+
+```dart
+// Navigate with data
+Navigator.push(
+  context,
+  MaterialPageRoute(
+    builder: (context) => UserDetailScreen(userId: user.id),
+  ),
+);
+
+// Navigate and get result
+final result = await Navigator.push(
+  context,
+  MaterialPageRoute(builder: (context) => EditUserScreen(user: user)),
+);
+if (result == true) refreshData();
+```
 
 ---
 
-## 📊 Success Criteria
+## 🔄 CRUD Operation Guidelines
 
-✅ Successful when:
-- Build <10 minutes
-- All endpoints return 200
-- No console errors
-- Logs show "DEPLOYMENT SUCCESSFUL"
-- No manual intervention
+### Backend CRUD Pattern
 
-❌ Failed if:
-- Build >15 minutes
-- dart2js crashes
-- HTTP 404/500
-- JS files broken
-- Required intervention
+```go
+// CREATE
+func EntityAdd(w http.ResponseWriter, r *http.Request) {
+    // 1. Parse request
+    r.ParseMultipartForm(32 << 20)
+    
+    // 2. Validate required fields
+    if requiredField == "" {
+        SetReponseStatus(w, r, statusCodeBadRequest, "field required", dialogType, response)
+        return
+    }
+    
+    // 3. Check permissions
+    if !checkPermission(adminID, hostelID, "can_manage_entity") {
+        SetReponseStatus(w, r, statusCodeForbidden, "Permission denied", dialogType, response)
+        return
+    }
+    
+    // 4. Generate ID
+    entityID := RandStringBytes(12)
+    
+    // 5. Insert to database
+    data := map[string]string{
+        "id": entityID,
+        "field": r.FormValue("field"),
+        "status": "1",
+        "created_at": time.Now().Format("2006-01-02 15:04:05"),
+    }
+    status, ok := insertSQL("table_name", data)
+    
+    // 6. Return response
+    if ok {
+        response["data"] = data
+        response["meta"] = setMeta(statusCodeCreated, "Created successfully", dialogType)
+        json.NewEncoder(w).Encode(response)
+    } else {
+        SetReponseStatus(w, r, status, "Failed to create", dialogType, response)
+    }
+}
+
+// READ
+func EntityGet(w http.ResponseWriter, r *http.Request) {
+    params := r.URL.Query()
+    hostelID := params.Get("hostel_id")
+    
+    rows, err := db.Query("SELECT * FROM table_name WHERE hostel_id = ? AND status = '1'", hostelID)
+    if err != nil {
+        SetReponseStatus(w, r, statusCodeServerError, err.Error(), dialogType, response)
+        return
+    }
+    defer rows.Close()
+    
+    var entities []Entity
+    for rows.Next() {
+        var entity Entity
+        rows.Scan(&entity.ID, &entity.Field, &entity.Status)
+        entities = append(entities, entity)
+    }
+    
+    response["data"] = entities
+    response["meta"] = setMeta(statusCodeOk, "Success", "")
+    json.NewEncoder(w).Encode(response)
+}
+
+// UPDATE
+func EntityUpdate(w http.ResponseWriter, r *http.Request) {
+    r.ParseMultipartForm(32 << 20)
+    
+    entityID := r.FormValue("id")
+    hostelID := r.FormValue("hostel_id")
+    
+    // Check permissions
+    if !checkPermission(adminID, hostelID, "can_manage_entity") {
+        SetReponseStatus(w, r, statusCodeForbidden, "Permission denied", dialogType, response)
+        return
+    }
+    
+    // Build update query
+    updateFields := []string{}
+    if field := r.FormValue("field"); field != "" {
+        updateFields = append(updateFields, "field = '"+field+"'")
+    }
+    updateFields = append(updateFields, "updated_at = '"+time.Now().Format("2006-01-02 15:04:05")+"'")
+    
+    query := "UPDATE table_name SET " + strings.Join(updateFields, ", ") + " WHERE id = ? AND hostel_id = ?"
+    _, err := db.Exec(query, entityID, hostelID)
+    
+    if err != nil {
+        SetReponseStatus(w, r, statusCodeServerError, err.Error(), dialogType, response)
+    } else {
+        response["meta"] = setMeta(statusCodeOk, "Updated successfully", dialogType)
+        json.NewEncoder(w).Encode(response)
+    }
+}
+
+// DELETE (Soft)
+func EntityDelete(w http.ResponseWriter, r *http.Request) {
+    params := r.URL.Query()
+    entityID := params.Get("id")
+    hostelID := params.Get("hostel_id")
+    
+    // Check permissions
+    if !checkPermission(adminID, hostelID, "can_manage_entity") {
+        SetReponseStatus(w, r, statusCodeForbidden, "Permission denied", dialogType, response)
+        return
+    }
+    
+    _, err := db.Exec("UPDATE table_name SET status = '0' WHERE id = ? AND hostel_id = ?", entityID, hostelID)
+    
+    if err != nil {
+        SetReponseStatus(w, r, statusCodeServerError, err.Error(), dialogType, response)
+    } else {
+        response["meta"] = setMeta(statusCodeOk, "Deleted successfully", dialogType)
+        json.NewEncoder(w).Encode(response)
+    }
+}
+```
+
+### Frontend CRUD Pattern
+
+```dart
+// CREATE
+Future<void> createEntity(Map<String, dynamic> data) async {
+  try {
+    setState(() => _isLoading = true);
+    
+    final response = await apiService.post('/entity', data);
+    
+    if (response.meta.status == "200") {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Created successfully'), backgroundColor: Colors.green),
+      );
+      Navigator.pop(context, true); // Return success
+    } else {
+      throw Exception(response.meta.message);
+    }
+  } catch (e) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+    );
+  } finally {
+    setState(() => _isLoading = false);
+  }
+}
+
+// READ
+Future<void> loadEntities() async {
+  try {
+    setState(() => _isLoading = true);
+    
+    final response = await apiService.get('/entity', {'hostel_id': Config.hostelID});
+    
+    if (response.meta.status == "200") {
+      setState(() {
+        entities = response.entities;
+        _isLoading = false;
+      });
+    } else {
+      throw Exception(response.meta.message);
+    }
+  } catch (e) {
+    setState(() => _isLoading = false);
+    oneButtonDialog(context, "Error", e.toString(), true);
+  }
+}
+
+// UPDATE
+Future<void> updateEntity(String id, Map<String, dynamic> data) async {
+  try {
+    setState(() => _isLoading = true);
+    
+    data['id'] = id;
+    data['hostel_id'] = Config.hostelID;
+    
+    final response = await apiService.put('/entity', data);
+    
+    if (response.meta.status == "200") {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Updated successfully'), backgroundColor: Colors.green),
+      );
+      loadEntities(); // Refresh list
+    } else {
+      throw Exception(response.meta.message);
+    }
+  } catch (e) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+    );
+  } finally {
+    setState(() => _isLoading = false);
+  }
+}
+
+// DELETE
+Future<void> deleteEntity(String id) async {
+  final confirm = await showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: Text('Confirm Delete'),
+      content: Text('Are you sure you want to delete this item?'),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context, false), child: Text('Cancel')),
+        TextButton(
+          onPressed: () => Navigator.pop(context, true),
+          child: Text('Delete', style: TextStyle(color: Colors.red)),
+        ),
+      ],
+    ),
+  );
+  
+  if (confirm != true) return;
+  
+  try {
+    setState(() => _isLoading = true);
+    
+    final response = await apiService.delete('/entity', {'id': id, 'hostel_id': Config.hostelID});
+    
+    if (response.meta.status == "200") {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Deleted successfully'), backgroundColor: Colors.green),
+      );
+      loadEntities(); // Refresh list
+    } else {
+      throw Exception(response.meta.message);
+    }
+  } catch (e) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+    );
+  } finally {
+    setState(() => _isLoading = false);
+  }
+}
+```
 
 ---
 
-Track metrics: build time, cache hit rate, success rate, bundle size, memory usage
-Optimize when: build time +20%, bundle size +30%, success <95%
-Report: weekly summary, trends, opportunities, recommendations
+## 🎨 UI Component Guidelines
 
-**End of Workspace Instructions**
+### 1. AppBar Standards
+```dart
+AppBar(
+  backgroundColor: Colors.white,
+  elevation: 2.0,
+  iconTheme: IconThemeData(color: Colors.black),
+  title: Text(
+    'Screen Title',
+    style: TextStyle(color: Colors.black, fontSize: 20, fontWeight: FontWeight.w600),
+  ),
+  actions: [
+    if (PermissionService.hasPermission('can_manage_entity'))
+      IconButton(
+        icon: Icon(Icons.add),
+        onPressed: () => navigateToAddScreen(),
+      ),
+  ],
+)
+```
 
+### 2. List Views
+```dart
+ListView.builder(
+  itemCount: items.length,
+  itemBuilder: (context, index) {
+    final item = items[index];
+    return Card(
+      margin: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      child: ListTile(
+        leading: CircleAvatar(child: Icon(Icons.item)),
+        title: Text(item.name, style: TextStyle(fontWeight: FontWeight.w600)),
+        subtitle: Text(item.description),
+        trailing: PopupMenuButton(
+          itemBuilder: (context) => [
+            if (PermissionService.hasPermission('can_manage_entity'))
+              PopupMenuItem(value: 'edit', child: Text('Edit')),
+            if (PermissionService.hasPermission('can_manage_entity'))
+              PopupMenuItem(value: 'delete', child: Text('Delete', style: TextStyle(color: Colors.red))),
+          ],
+          onSelected: (value) {
+            if (value == 'edit') editItem(item);
+            if (value == 'delete') deleteItem(item.id);
+          },
+        ),
+        onTap: () => viewItemDetails(item),
+      ),
+    );
+  },
+)
+```
+
+### 3. Empty States
+```dart
+Center(
+  child: Column(
+    mainAxisAlignment: MainAxisAlignment.center,
+    children: [
+      Icon(Icons.inbox, size: 80, color: Colors.grey),
+      SizedBox(height: 16),
+      Text(
+        'No items found',
+        style: TextStyle(fontSize: 18, color: Colors.grey),
+      ),
+      SizedBox(height: 8),
+      if (PermissionService.hasPermission('can_manage_entity'))
+        ElevatedButton(
+          onPressed: () => navigateToAddScreen(),
+          child: Text('Add Item'),
+        ),
+    ],
+  ),
+)
+```
+
+### 4. Dashboard Cards
+```dart
+Card(
+  elevation: 4,
+  margin: EdgeInsets.all(8),
+  child: InkWell(
+    onTap: () => navigateToDetail(),
+    child: Padding(
+      padding: EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.dashboard, color: Colors.blue, size: 32),
+              SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Card Title',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 12),
+          Text(
+            'Description or stats',
+            style: TextStyle(color: Colors.grey[600]),
+          ),
+          SizedBox(height: 8),
+          Text(
+            '123',
+            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.blue),
+          ),
+        ],
+      ),
+    ),
+  ),
+)
+```
+
+---
+
+## 🔧 Code Quality Standards
+
+### 1. Naming Conventions
+- **Dart**: camelCase for variables, PascalCase for classes
+- **Go**: camelCase for variables, PascalCase for exported functions
+- **Database**: snake_case for table and column names
+- Use descriptive names: `getUserById` not `getUser`
+
+### 2. Code Organization
+- **Dart**: Separate screens, utils, models, services
+- **Go**: Separate files by entity (user.go, bill.go, etc.)
+- Keep files under 500 lines - split if larger
+- Group related functions together
+
+### 3. Comments
+- Add comments for complex logic
+- Document all public APIs
+- Include TODO comments for incomplete features
+- Explain WHY not WHAT
+
+```dart
+// Fetch users but filter out inactive ones since the backend 
+// returns all statuses when admin requests (known issue)
+final activeUsers = allUsers.where((u) => u.status == '1').toList();
+```
+
+### 4. Error Handling
+- NEVER ignore errors
+- Log errors with context
+- Return meaningful error messages to users
+- Use try-catch-finally appropriately
+
+### 5. Testing
+- Write unit tests for business logic
+- Write widget tests for UI components
+- Test error scenarios
+- Test permission checks
+
+---
+
+## 🚀 Performance Optimization
+
+### 1. Backend
+- Use database indexes on frequently queried columns
+- Limit query results with LIMIT and OFFSET
+- Use connection pooling (already configured)
+- Cache frequently accessed data
+- Optimize N+1 query problems
+
+### 2. Frontend
+- Use `const` constructors where possible
+- Lazy load images with `FadeInImage`
+- Paginate large lists
+- Cache API responses when appropriate
+- Use `ListView.builder` not `ListView` for long lists
+
+### 3. API Efficiency
+- Return only required fields
+- Use pagination for list endpoints
+- Compress large responses
+- Implement caching headers
+
+---
+
+## 📊 Database Best Practices
+
+### 1. Schema Design
+- Use appropriate data types
+- Add indexes on foreign keys
+- Use ENUM for fixed sets of values
+- Normalize data appropriately
+
+### 2. Migrations
+- NEVER modify existing migration files
+- Create new migration files for schema changes
+- Test migrations on dev environment first
+- Include rollback scripts
+
+### 3. Queries
+- Use prepared statements to prevent SQL injection
+- Avoid SELECT * - specify columns
+- Use JOINs efficiently
+- Add indexes for frequently filtered/sorted columns
+
+---
+
+## 🔒 Security Guidelines
+
+### 1. Authentication
+- Hash passwords with bcrypt
+- Use secure session tokens
+- Implement token expiration
+- Validate credentials on every request
+
+### 2. Authorization
+- Check permissions on EVERY protected endpoint
+- Validate hostel_id belongs to user
+- Don't trust client-side data
+- Implement rate limiting
+
+### 3. Input Validation
+- Validate ALL user inputs
+- Sanitize SQL inputs (use prepared statements)
+- Validate file uploads (type, size)
+- Check for SQL injection, XSS
+
+### 4. Data Protection
+- Don't log sensitive data (passwords, tokens)
+- Use HTTPS in production
+- Encrypt sensitive data at rest
+- Implement proper CORS policies
+
+---
+
+## 📦 Deployment Checklist
+
+### Pre-Deployment
+- [ ] All tests passing
+- [ ] No console errors
+- [ ] All CRUD operations working
+- [ ] RBAC properly implemented
+- [ ] API endpoints secured
+- [ ] Database migrations applied
+- [ ] Environment variables configured
+- [ ] Assets optimized (images compressed)
+
+### Flutter Web Build
+- [ ] Run `flutter clean` if dependencies changed
+- [ ] Build: `flutter build web --release --no-source-maps`
+- [ ] Test on multiple browsers
+- [ ] Check bundle size (<5MB)
+- [ ] Verify all routes work
+- [ ] Test on mobile devices
+
+### Backend Deployment
+- [ ] Environment variables set
+- [ ] Database connection tested
+- [ ] S3 bucket configured
+- [ ] API keys configured
+- [ ] CORS configured
+- [ ] Health check endpoint working
+
+### Post-Deployment
+- [ ] Smoke test all major features
+- [ ] Check error logs
+- [ ] Monitor performance metrics
+- [ ] Verify RBAC working
+- [ ] Test payment flows
+
+---
+
+## 🐛 Debugging Guidelines
+
+### Flutter Debugging
+- Use `print()` for quick debugging
+- Use `debugPrint()` for production
+- Check Flutter DevTools for performance
+- Use breakpoints in VS Code/Android Studio
+- Check network calls in DevTools
+
+### Go Debugging
+- Use `log.Println()` for debugging
+- Check CloudWatch logs (if on AWS)
+- Use Postman/Insomnia for API testing
+- Test database queries directly in MySQL
+- Use `defer` for cleanup
+
+### Common Issues
+- **CORS errors**: Check backend CORS configuration
+- **404 errors**: Verify routing and endpoint URLs
+- **Permission denied**: Check RBAC implementation
+- **Slow queries**: Add database indexes
+- **Memory leaks**: Check for unclosed connections
+
+---
+
+## 📋 Module Completion Checklist
+
+For each module (Users, Rooms, Bills, etc.), ensure:
+
+- [ ] **Backend API**
+  - [ ] GET endpoint with filtering
+  - [ ] POST endpoint with validation
+  - [ ] PUT endpoint with permission check
+  - [ ] DELETE endpoint (soft delete)
+  - [ ] Permission checks on all endpoints
+  - [ ] Proper error handling
+  - [ ] Response follows standard format
+
+- [ ] **Frontend Screen**
+  - [ ] List view with loading state
+  - [ ] Empty state with helpful message
+  - [ ] Add/Edit form with validation
+  - [ ] Delete confirmation dialog
+  - [ ] Permission-based UI hiding
+  - [ ] Error handling with user feedback
+  - [ ] Refresh functionality
+  - [ ] Search/filter (if applicable)
+
+- [ ] **Testing**
+  - [ ] API endpoints tested with Postman
+  - [ ] UI tested on mobile and web
+  - [ ] Permission checks verified
+  - [ ] Error scenarios tested
+  - [ ] Data validation working
+
+---
+
+## 🎯 Priority Features to Complete
+
+### High Priority (Essential)
+1. **RBAC Frontend Integration** - Implement permission checks in all screens
+2. **Manager Management UI** - Screen for owners to add/remove managers
+3. **Permission Management UI** - Screen to assign permissions to managers
+4. **User Profile Screen** - View/edit admin profile
+5. **Dashboard Analytics** - Real-time stats with charts
+
+### Medium Priority (Important)
+1. **Advanced Search/Filters** - Search across all modules
+2. **Export Reports** - PDF/Excel export functionality
+3. **Notification System** - In-app and push notifications
+4. **Payment Integration** - Razorpay/Stripe integration
+5. **Bulk Operations** - Bulk bill generation, tenant import
+
+### Low Priority (Nice to Have)
+1. **Dark Mode** - Theme switcher
+2. **Multi-language Support** - i18n implementation
+3. **Offline Mode** - Local caching for offline use
+4. **Advanced Analytics** - Charts, trends, predictions
+5. **Audit Logs** - Track all user actions
+
+---
+
+## 🤝 Code Review Standards
+
+Before committing code, verify:
+- [ ] Code follows naming conventions
+- [ ] No hardcoded values (use config/constants)
+- [ ] Error handling implemented
+- [ ] Loading states shown
+- [ ] Permissions checked (if applicable)
+- [ ] Comments added for complex logic
+- [ ] No console errors
+- [ ] Tested on intended platforms
+- [ ] API calls efficient (no N+1 problems)
+- [ ] UI is responsive
+
+---
+
+## 📞 When to Ask User
+
+**ALWAYS ask before:**
+- Major architectural changes
+- Adding new dependencies
+- Modifying database schema
+- Changing API contracts
+- Implementing paid features
+- Deployment to production
+
+**NEVER ask for:**
+- Bug fixes
+- UI improvements
+- Code refactoring
+- Adding comments
+- Performance optimizations
+- Following these rules
+
+---
+
+## 🎓 Learning Resources
+
+- Flutter: https://flutter.dev/docs
+- Go: https://go.dev/doc/
+- Material Design: https://material.io/
+- MySQL: https://dev.mysql.com/doc/
+- AWS: https://docs.aws.amazon.com/
+
+---
+
+**Remember**: Quality over quantity. Write clean, maintainable, secure code that follows these guidelines. When in doubt, prioritize user experience and security.
+
+**End of Development Rules**

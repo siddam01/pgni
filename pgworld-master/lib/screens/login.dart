@@ -13,6 +13,7 @@ import '../utils/models.dart';
 import '../utils/api.dart';
 import '../utils/config.dart';
 import '../utils/utils.dart';
+import '../utils/permission_service.dart';
 
 class Login extends StatefulWidget {
   @override
@@ -69,6 +70,11 @@ class LoginState extends State<Login> {
           adminID = prefs.getString("adminID");
           hostelName = prefs.getString("hostelName");
           amenities = prefs.getString("amenities").split(",");
+          Config.hostelID = hostelID;
+          
+          // Initialize permissions from cache
+          PermissionService.initFromCache();
+          
           Navigator.of(context).pushReplacement(new MaterialPageRoute(
               builder: (BuildContext context) => new DashBoardActivity()));
         } else {
@@ -123,25 +129,34 @@ class LoginState extends State<Login> {
               adminID = response.admins[0].id;
               Future<Hostels> hostelResponse = getHostels(
                   Map.from({'id': response.admins[0].hostels, 'status': '1'}));
-              hostelResponse.then((response) {
-                setState(() {
-                  if (response.hostels.length > 0) {
-                    prefs.setString('hostelID', response.hostels[0].id);
-                    prefs.setString('hostelName', response.hostels[0].name);
-                    prefs.setString('amenities', response.hostels[0].amenities);
-                    hostelID = response.hostels[0].id;
-                    hostelName = response.hostels[0].name;
-                    amenities = response.hostels[0].amenities.split(",");
-
+              hostelResponse.then((hostelResp) async {
+                if (hostelResp.hostels.length > 0) {
+                  prefs.setString('hostelID', hostelResp.hostels[0].id);
+                  prefs.setString('hostelName', hostelResp.hostels[0].name);
+                  prefs.setString('amenities', hostelResp.hostels[0].amenities);
+                  hostelID = hostelResp.hostels[0].id;
+                  hostelName = hostelResp.hostels[0].name;
+                  amenities = hostelResp.hostels[0].amenities.split(",");
+                  Config.hostelID = hostelID;
+                  
+                  // Load user permissions after successful login
+                  await PermissionService.loadPermissions(
+                    response.admins[0].id,
+                    hostelResp.hostels[0].id,
+                  );
+                  
+                  setState(() {
                     Navigator.of(context).pushReplacement(new MaterialPageRoute(
                         builder: (BuildContext context) =>
                             new DashBoardActivity()));
-                  } else {
+                  });
+                } else {
+                  setState(() {
                     Navigator.of(context).pushReplacement(new MaterialPageRoute(
                         builder: (BuildContext context) =>
                             new HostelActivity(null, true, true)));
-                  }
-                });
+                  });
+                }
               });
             }
           }

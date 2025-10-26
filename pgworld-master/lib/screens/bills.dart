@@ -9,6 +9,7 @@ import './billFilter.dart';
 import '../utils/models.dart';
 import '../utils/api.dart';
 import '../utils/config.dart';
+import '../utils/permission_service.dart';
 
 class BillsActivity extends StatefulWidget {
   final Employee employee;
@@ -242,28 +243,35 @@ class BillsActivityState extends State<BillsActivity> {
                   icon: new Icon(Icons.filter_list),
                 )
               : new Container(),
-          new IconButton(
-            onPressed: () {
-              addPage(context, new BillActivity(null, user, null, false));
-            },
-            icon: new Icon(Icons.add),
-          ),
+          // Only show Add button if user has permission to manage bills
+          if (PermissionService.hasPermission(PermissionService.PERMISSION_MANAGE_BILLS))
+            new IconButton(
+              onPressed: () {
+                addPage(context, new BillActivity(null, user, null, false));
+              },
+              icon: new Icon(Icons.add),
+            ),
         ],
       ),
       body: ModalProgressHUD(
         child: bills.length == 0
             ? (new Center(
-                child: new MaterialButton(
-                  child: new Text(
-                    "Add Advance/Token Amount",
-                    style: TextStyle(
-                      color: Colors.blue,
-                    ),
-                  ),
-                  onPressed: () {
-                    addPage(context, new BillActivity(null, user, null, true));
-                  },
-                ),
+                child: PermissionService.hasPermission(PermissionService.PERMISSION_MANAGE_BILLS)
+                    ? new MaterialButton(
+                        child: new Text(
+                          "Add Advance/Token Amount",
+                          style: TextStyle(
+                            color: Colors.blue,
+                          ),
+                        ),
+                        onPressed: () {
+                          addPage(context, new BillActivity(null, user, null, true));
+                        },
+                      )
+                    : new Text(
+                        loading ? "" : "No bills",
+                        style: TextStyle(color: Colors.grey),
+                      ),
               ))
             : new ListView.builder(
                 controller: _controller,

@@ -1090,3 +1090,87 @@ class ChartData {
         "shown": shown,
       };
 }
+
+// Permissions Response
+class PermissionsResponse {
+  final Map<String, dynamic>? data;
+  final Meta meta;
+
+  PermissionsResponse({this.data, required this.meta});
+
+  factory PermissionsResponse.fromJson(Map<String, dynamic> json) {
+    return PermissionsResponse(
+      data: json['data'] as Map<String, dynamic>?,
+      meta: Meta.fromJson(json['meta']),
+    );
+  }
+}
+
+// Manager
+class Manager {
+  final String id;
+  final String username;
+  final String name;
+  final String email;
+  final String? phone;
+  final List<Property> properties;
+  final String status;
+  final String? createdAt;
+
+  Manager({
+    required this.id,
+    required this.username,
+    required this.name,
+    required this.email,
+    this.phone,
+    required this.properties,
+    required this.status,
+    this.createdAt,
+  });
+
+  factory Manager.fromJson(Map<String, dynamic> json) {
+    return Manager(
+      id: json['id'] ?? '',
+      username: json['username'] ?? '',
+      name: json['name'] ?? '',
+      email: json['email'] ?? '',
+      phone: json['phone'],
+      properties: json['properties'] != null
+          ? List<Property>.from(json['properties'].map((i) => Property.fromJson(i)))
+          : <Property>[],
+      status: json['status'] ?? '1',
+      createdAt: json['created_at'],
+    );
+  }
+}
+
+class Property {
+  final String id;
+  final String name;
+
+  Property({required this.id, required this.name});
+
+  factory Property.fromJson(Map<String, dynamic> json) {
+    return Property(
+      id: json['id'] ?? '',
+      name: json['name'] ?? '',
+    );
+  }
+}
+
+// Managers Response
+class ManagersResponse {
+  final List<Manager> managers;
+  final Meta meta;
+
+  ManagersResponse({required this.managers, required this.meta});
+
+  factory ManagersResponse.fromJson(Map<String, dynamic> json) {
+    return ManagersResponse(
+      managers: json['data'] != null
+          ? List<Manager>.from(json['data'].map((i) => Manager.fromJson(i)))
+          : <Manager>[],
+      meta: Meta.fromJson(json['meta']),
+    );
+  }
+}

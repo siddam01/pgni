@@ -9,6 +9,7 @@ import '../utils/models.dart';
 import '../utils/api.dart';
 import '../utils/config.dart';
 import '../utils/utils.dart';
+import '../utils/permission_service.dart';
 
 class EmployeesActivity extends StatefulWidget {
   @override
@@ -148,12 +149,14 @@ class EmployeesActivityState extends State<EmployeesActivity> {
           //   },
           //   icon: new Icon(Icons.mail),
           // ),
-          new IconButton(
-            onPressed: () {
-              addPage(context, new EmployeeActivity(null));
-            },
-            icon: new Icon(Icons.add),
-          ),
+          // Only show Add button if user has permission to manage employees
+          if (PermissionService.hasPermission(PermissionService.PERMISSION_MANAGE_EMPLOYEES))
+            new IconButton(
+              onPressed: () {
+                addPage(context, new EmployeeActivity(null));
+              },
+              icon: new Icon(Icons.add),
+            ),
         ],
       ),
       body: ModalProgressHUD(
