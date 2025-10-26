@@ -35,10 +35,10 @@ echo -e "${BLUE}========================================${NC}"
 echo ""
 
 #############################################################
-# CONFIGURATION
+# CONFIGURATION - AUTO DETECTION
 #############################################################
 
-echo -e "${YELLOW}📋 Step 1: Configuration${NC}"
+echo -e "${YELLOW}📋 Step 1: Auto-detecting AWS Configuration${NC}"
 echo ""
 
 # Check if running on EC2
@@ -50,34 +50,109 @@ else
     IS_EC2=false
 fi
 
-# Get configuration
-read -p "Enter your EC2 Public IP (or press Enter to auto-detect): " EC2_IP
-if [ -z "$EC2_IP" ]; then
-    EC2_IP=$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4 2>/dev/null || echo "localhost")
-    echo "Auto-detected IP: $EC2_IP"
+# Check for existing configuration file
+CONFIG_FILE="$HOME/.pgni-config"
+if [ -f "$CONFIG_FILE" ]; then
+    echo -e "${GREEN}✅ Found existing configuration${NC}"
+    source "$CONFIG_FILE"
+    echo "Using saved configuration:"
+    echo "  EC2 IP: $EC2_IP"
+    echo "  RDS: $RDS_ENDPOINT"
+    echo "  Database: $DB_NAME"
+    echo "  S3 Bucket: $S3_BUCKET"
+    echo ""
+    read -p "Use these settings? (y/n) [y]: " USE_SAVED
+    USE_SAVED=${USE_SAVED:-y}
+    
+    if [ "$USE_SAVED" != "y" ]; then
+        rm -f "$CONFIG_FILE"
+    fi
 fi
 
-read -p "Enter RDS Endpoint (e.g., mydb.123.us-east-1.rds.amazonaws.com): " RDS_ENDPOINT
-read -p "Enter Database User [admin]: " DB_USER
-DB_USER=${DB_USER:-admin}
-read -sp "Enter Database Password: " DB_PASSWORD
-echo ""
-read -p "Enter Database Name [pgworld]: " DB_NAME
-DB_NAME=${DB_NAME:-pgworld}
+if [ ! -f "$CONFIG_FILE" ]; then
+    echo "Auto-detecting AWS resources..."
+    echo ""
+    
+    # Auto-detect EC2 IP
+    EC2_IP=$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4 2>/dev/null || echo "")
+    if [ -n "$EC2_IP" ]; then
+        echo -e "${GREEN}✅ EC2 Public IP: $EC2_IP${NC}"
+    else
+        read -p "Enter EC2 Public IP: " EC2_IP
+    fi
+    
+    # Auto-detect RDS endpoint
+    echo "Searching for RDS instances..."
+    RDS_ENDPOINT=$(aws rds describe-db-instances --query 'DBInstances[?DBInstanceStatus==`available`].Endpoint.Address' --output text 2>/dev/null | head -n 1)
+    if [ -n "$RDS_ENDPOINT" ]; then
+        echo -e "${GREEN}✅ Found RDS: $RDS_ENDPOINT${NC}"
+        
+        # Get DB name
+        DB_NAME=$(aws rds describe-db-instances --query 'DBInstances[?Endpoint.Address==`'$RDS_ENDPOINT'`].DBName' --output text 2>/dev/null)
+        if [ -z "$DB_NAME" ] || [ "$DB_NAME" == "None" ]; then
+            DB_NAME="pgworld"
+        fi
+        echo -e "${GREEN}✅ Database Name: $DB_NAME${NC}"
+        
+        # Get master username
+        DB_USER=$(aws rds describe-db-instances --query 'DBInstances[?Endpoint.Address==`'$RDS_ENDPOINT'`].MasterUsername' --output text 2>/dev/null)
+        if [ -n "$DB_USER" ]; then
+            echo -e "${GREEN}✅ Database User: $DB_USER${NC}"
+        else
+            DB_USER="admin"
+        fi
+    else
+        echo -e "${YELLOW}⚠️  Could not auto-detect RDS${NC}"
+        read -p "Enter RDS Endpoint: " RDS_ENDPOINT
+        read -p "Enter Database User [admin]: " DB_USER
+        DB_USER=${DB_USER:-admin}
+        read -p "Enter Database Name [pgworld]: " DB_NAME
+        DB_NAME=${DB_NAME:-pgworld}
+    fi
+    
+    # Database password (must be entered manually for security)
+    echo ""
+    read -sp "Enter Database Password: " DB_PASSWORD
+    echo ""
+    
+    # Auto-detect S3 bucket
+    echo "Searching for S3 buckets..."
+    S3_BUCKET=$(aws s3 ls | grep -i pgworld | grep -i admin | head -n 1 | awk '{print $3}')
+    if [ -n "$S3_BUCKET" ]; then
+        echo -e "${GREEN}✅ Found S3 Bucket: $S3_BUCKET${NC}"
+    else
+        S3_BUCKET="pgworld-admin"
+        echo -e "${YELLOW}⚠️  Using default S3 Bucket: $S3_BUCKET${NC}"
+    fi
+    
+    # Save configuration
+    cat > "$CONFIG_FILE" << EOF
+EC2_IP="$EC2_IP"
+RDS_ENDPOINT="$RDS_ENDPOINT"
+DB_USER="$DB_USER"
+DB_NAME="$DB_NAME"
+S3_BUCKET="$S3_BUCKET"
+EOF
+    chmod 600 "$CONFIG_FILE"
+    echo ""
+    echo -e "${GREEN}✅ Configuration saved to $CONFIG_FILE${NC}"
+fi
 
-read -p "Enter S3 Bucket for frontend [pgworld-admin]: " S3_BUCKET
-S3_BUCKET=${S3_BUCKET:-pgworld-admin}
-
 echo ""
-echo -e "${GREEN}Configuration complete!${NC}"
-echo "EC2 IP: $EC2_IP"
-echo "RDS: $RDS_ENDPOINT"
-echo "Database: $DB_NAME"
+echo -e "${CYAN}========================================${NC}"
+echo -e "${GREEN}📊 Deployment Configuration${NC}"
+echo -e "${CYAN}========================================${NC}"
+echo "EC2 Public IP: $EC2_IP"
+echo "RDS Endpoint: $RDS_ENDPOINT"
+echo "Database User: $DB_USER"
+echo "Database Name: $DB_NAME"
 echo "S3 Bucket: $S3_BUCKET"
+echo -e "${CYAN}========================================${NC}"
 echo ""
 
-read -p "Continue with deployment? (y/n): " CONTINUE
-if [ "$CONTINUE" != "y" ]; then
+read -p "Continue with deployment? (Y/n): " CONTINUE
+CONTINUE=${CONTINUE:-Y}
+if [ "$CONTINUE" != "Y" ] && [ "$CONTINUE" != "y" ]; then
     echo "Deployment cancelled."
     exit 0
 fi
