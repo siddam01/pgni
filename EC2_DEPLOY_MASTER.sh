@@ -263,56 +263,47 @@ fi
 #############################################################
 
 echo ""
-echo -e "${YELLOW}💾 Step 4: Setting up Database${NC}"
+echo -e "${YELLOW}💾 Step 4: Setting up Database (Safe MySQL Compatible)${NC}"
 echo ""
 
-echo "Creating database and tables..."
+# Test database connection first
+echo "Testing database connection..."
+mysql -h "$RDS_ENDPOINT" -u "$DB_USER" -p"$DB_PASSWORD" -e "SELECT 1" 2>/dev/null
+if [ $? -ne 0 ]; then
+    echo -e "${RED}❌ Database connection failed!${NC}"
+    echo "Please verify:"
+    echo "  - RDS Endpoint: $RDS_ENDPOINT"
+    echo "  - Database User: $DB_USER"
+    echo "  - Database Password is correct"
+    exit 1
+fi
 
-mysql -h "$RDS_ENDPOINT" -u "$DB_USER" -p"$DB_PASSWORD" << EOSQL
--- Create database if not exists
-CREATE DATABASE IF NOT EXISTS $DB_NAME;
-USE $DB_NAME;
+echo -e "${GREEN}✅ Database connection successful${NC}"
 
--- Create admin_permissions table
-CREATE TABLE IF NOT EXISTS admin_permissions (
-  id VARCHAR(12) PRIMARY KEY,
-  admin_id VARCHAR(12) NOT NULL,
-  hostel_id VARCHAR(12) NOT NULL,
-  role VARCHAR(20) NOT NULL DEFAULT 'manager',
-  can_view_dashboard BOOLEAN DEFAULT FALSE,
-  can_manage_rooms BOOLEAN DEFAULT FALSE,
-  can_manage_tenants BOOLEAN DEFAULT FALSE,
-  can_manage_bills BOOLEAN DEFAULT FALSE,
-  can_view_financials BOOLEAN DEFAULT FALSE,
-  can_manage_employees BOOLEAN DEFAULT FALSE,
-  can_view_reports BOOLEAN DEFAULT FALSE,
-  can_manage_notices BOOLEAN DEFAULT FALSE,
-  can_manage_issues BOOLEAN DEFAULT FALSE,
-  can_manage_payments BOOLEAN DEFAULT FALSE,
-  assigned_by VARCHAR(12) NOT NULL,
-  status ENUM('0', '1') DEFAULT '1',
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  INDEX idx_admin_id (admin_id),
-  INDEX idx_hostel_id (hostel_id),
-  INDEX idx_status (status)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
--- Add columns to admins table if they don't exist
-ALTER TABLE admins 
-  ADD COLUMN IF NOT EXISTS role ENUM('owner', 'manager') DEFAULT 'owner',
-  ADD COLUMN IF NOT EXISTS parent_admin_id VARCHAR(12) NULL,
-  ADD COLUMN IF NOT EXISTS assigned_hostel_ids TEXT NULL;
-
--- Update existing admins to be owners
-UPDATE admins SET role = 'owner' WHERE role IS NULL;
-
-EOSQL
-
+# Create database if not exists
+echo "Creating database..."
+mysql -h "$RDS_ENDPOINT" -u "$DB_USER" -p"$DB_PASSWORD" -e "CREATE DATABASE IF NOT EXISTS $DB_NAME;"
 if [ $? -eq 0 ]; then
-    echo -e "${GREEN}✅ Database setup complete${NC}"
+    echo -e "${GREEN}✅ Database '$DB_NAME' ready${NC}"
 else
-    echo -e "${RED}❌ Database setup failed${NC}"
+    echo -e "${RED}❌ Failed to create database${NC}"
+    exit 1
+fi
+
+# Run safe migration
+echo "Running database migration (MySQL compatible)..."
+if [ -f "pgworld-api-master/setup-database-safe.sql" ]; then
+    mysql -h "$RDS_ENDPOINT" -u "$DB_USER" -p"$DB_PASSWORD" < pgworld-api-master/setup-database-safe.sql
+    
+    if [ $? -eq 0 ]; then
+        echo -e "${GREEN}✅ Database migration complete${NC}"
+    else
+        echo -e "${RED}❌ Database migration failed${NC}"
+        echo "Check the SQL file: pgworld-api-master/setup-database-safe.sql"
+        exit 1
+    fi
+else
+    echo -e "${RED}❌ Migration file not found: pgworld-api-master/setup-database-safe.sql${NC}"
     exit 1
 fi
 
