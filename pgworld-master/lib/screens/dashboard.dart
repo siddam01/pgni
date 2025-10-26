@@ -14,6 +14,7 @@ import './settings.dart';
 import './report.dart';
 import '../utils/utils.dart';
 import '../utils/config.dart';
+import '../utils/permission_service.dart';
 
 class DashBoardActivity extends StatefulWidget {
   @override
@@ -35,6 +36,29 @@ class DashBoardActivityState extends State<DashBoardActivity> {
   @override
   void initState() {
     super.initState();
+
+    // Check dashboard permission
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!PermissionService.hasPermission(PermissionService.PERMISSION_VIEW_DASHBOARD)) {
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => AlertDialog(
+            title: Text('Access Denied'),
+            content: Text('You do not have permission to view the dashboard.\n\nContact your administrator to request access.'),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  Navigator.pop(context); // Go back to previous screen
+                },
+                child: Text('OK'),
+              ),
+            ],
+          ),
+        );
+      }
+    });
 
     hostelId = Config.hostelID;
 

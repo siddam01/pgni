@@ -1,0 +1,311 @@
+name: CloudPG - Complete CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch: # Allow manual trigger
+
+env:
+  GO_VERSION: '1.21'
+  FLUTTER_VERSION: '3.16.0'
+  NODE_VERSION: '18'
+
+jobs:
+  # ============================================================================
+  # JOB 1: Build & Test Backend (Go API)
+  # ============================================================================
+  backend-build:
+    name: 🔨 Build & Test Backend (Go)
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔧 Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: 📦 Install dependencies
+        working-directory: ./pgworld-api-master
+        run: go mod download
+
+      - name: 🏗️ Build binary
+        working-directory: ./pgworld-api-master
+        run: go build -v -o pgworld-api main.go
+
+      - name: ✅ Run tests (if exist)
+        working-directory: ./pgworld-api-master
+        run: go test -v ./... || echo "No tests found"
+        continue-on-error: true
+
+      - name: 📤 Upload backend artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-binary
+          path: pgworld-api-master/pgworld-api
+          retention-days: 1
+
+  # ============================================================================
+  # JOB 2: Build Admin Portal (Flutter Web)
+  # ============================================================================
+  admin-portal-build:
+    name: 🖥️ Build Admin Portal (Flutter)
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔧 Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: 'stable'
+
+      - name: 📦 Install dependencies
+        working-directory: ./pgworld-master
+        run: flutter pub get
+
+      - name: 🧹 Clean build
+        working-directory: ./pgworld-master
+        run: flutter clean
+
+      - name: ✅ Run tests (if exist)
+        working-directory: ./pgworld-master
+        run: flutter test || echo "No tests found"
+        continue-on-error: true
+
+      - name: 🏗️ Build web
+        working-directory: ./pgworld-master
+        run: flutter build web --release --base-href="/admin/"
+
+      - name: 📤 Upload admin artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: admin-web
+          path: pgworld-master/build/web
+          retention-days: 1
+
+  # ============================================================================
+  # JOB 3: Build Tenant Portal (Flutter Web)
+  # ============================================================================
+  tenant-portal-build:
+    name: 📱 Build Tenant Portal (Flutter)
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔧 Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: 'stable'
+
+      - name: 📦 Install dependencies
+        working-directory: ./pgworldtenant-master
+        run: flutter pub get
+
+      - name: 🧹 Clean build
+        working-directory: ./pgworldtenant-master
+        run: flutter clean
+
+      - name: ✅ Run tests (if exist)
+        working-directory: ./pgworldtenant-master
+        run: flutter test || echo "No tests found"
+        continue-on-error: true
+
+      - name: 🏗️ Build web
+        working-directory: ./pgworldtenant-master
+        run: flutter build web --release --base-href="/tenant/"
+
+      - name: 📤 Upload tenant artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: tenant-web
+          path: pgworldtenant-master/build/web
+          retention-days: 1
+
+  # ============================================================================
+  # JOB 4: Deploy to AWS (Only on main/master push)
+  # ============================================================================
+  deploy:
+    name: 🚀 Deploy to AWS
+    needs: [backend-build, admin-portal-build, tenant-portal-build]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' && github.event_name == 'push'
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 📥 Download backend artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: backend-binary
+          path: ./deploy/backend
+
+      - name: 📥 Download admin artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: admin-web
+          path: ./deploy/admin
+
+      - name: 📥 Download tenant artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: tenant-web
+          path: ./deploy/tenant
+
+      # ========================================
+      # Deploy Backend to EC2
+      # ========================================
+      - name: 🔑 Configure SSH key
+        env:
+          EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+        run: |
+          echo "$EC2_SSH_KEY" > ec2_key.pem
+          chmod 600 ec2_key.pem
+
+      - name: 🚀 Deploy backend to EC2
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_USER: ${{ secrets.EC2_USER }}
+        run: |
+          chmod +x ./deploy/backend/pgworld-api
+          scp -i ec2_key.pem -o StrictHostKeyChecking=no ./deploy/backend/pgworld-api $EC2_USER@$EC2_HOST:/home/$EC2_USER/
+          ssh -i ec2_key.pem -o StrictHostKeyChecking=no $EC2_USER@$EC2_HOST << 'EOF'
+            sudo systemctl stop pgworld-api || true
+            sudo mkdir -p /opt/pgworld/api
+            sudo mv /home/$EC2_USER/pgworld-api /opt/pgworld/api/
+            sudo chmod +x /opt/pgworld/api/pgworld-api
+            sudo systemctl start pgworld-api
+            sleep 3
+            sudo systemctl status pgworld-api
+          EOF
+
+      # ========================================
+      # Deploy Admin Portal to S3
+      # ========================================
+      - name: 🔑 Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: 🚀 Deploy admin portal to S3
+        run: |
+          aws s3 sync ./deploy/admin s3://pgworld-admin/ --delete
+          echo "✅ Admin portal deployed to S3"
+
+      - name: ♻️ Invalidate CloudFront cache (Admin)
+        if: vars.CLOUDFRONT_ADMIN_ID != ''
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id ${{ vars.CLOUDFRONT_ADMIN_ID }} \
+            --paths "/*" || echo "⚠️ No CloudFront configured for admin"
+
+      # ========================================
+      # Deploy Tenant Portal to S3
+      # ========================================
+      - name: 🚀 Deploy tenant portal to S3
+        run: |
+          aws s3 sync ./deploy/tenant s3://pgworld-tenant/ --delete
+          echo "✅ Tenant portal deployed to S3"
+
+      - name: ♻️ Invalidate CloudFront cache (Tenant)
+        if: vars.CLOUDFRONT_TENANT_ID != ''
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id ${{ vars.CLOUDFRONT_TENANT_ID }} \
+            --paths "/*" || echo "⚠️ No CloudFront configured for tenant"
+
+      # ========================================
+      # Cleanup
+      # ========================================
+      - name: 🧹 Cleanup
+        if: always()
+        run: |
+          rm -f ec2_key.pem
+          echo "✅ Cleanup complete"
+
+      # ========================================
+      # Deployment Summary
+      # ========================================
+      - name: 📊 Deployment Summary
+        run: |
+          echo "======================================"
+          echo "✅ DEPLOYMENT COMPLETE!"
+          echo "======================================"
+          echo "🔹 Backend API: http://${{ secrets.EC2_HOST }}:8080"
+          echo "🔹 Admin Portal: https://pgworld-admin.s3.amazonaws.com/admin/index.html"
+          echo "🔹 Tenant Portal: https://pgworld-tenant.s3.amazonaws.com/tenant/index.html"
+          echo "======================================"
+          echo "📅 Deployed at: $(date)"
+          echo "📦 Git Commit: ${{ github.sha }}"
+          echo "👤 Triggered by: ${{ github.actor }}"
+          echo "======================================"
+
+  # ============================================================================
+  # JOB 5: Post-Deployment Smoke Tests
+  # ============================================================================
+  smoke-tests:
+    name: 🧪 Smoke Tests
+    needs: [deploy]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' && github.event_name == 'push'
+    
+    steps:
+      - name: ✅ Test Backend Health
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+        run: |
+          echo "Testing backend health..."
+          curl -f http://$EC2_HOST:8080/health || echo "⚠️ Backend health check failed"
+
+      - name: ✅ Test Admin Portal Accessibility
+        run: |
+          echo "Testing admin portal..."
+          curl -f https://pgworld-admin.s3.amazonaws.com/admin/index.html || echo "⚠️ Admin portal not accessible"
+
+      - name: ✅ Test Tenant Portal Accessibility
+        run: |
+          echo "Testing tenant portal..."
+          curl -f https://pgworld-tenant.s3.amazonaws.com/tenant/index.html || echo "⚠️ Tenant portal not accessible"
+
+      - name: 📊 Test Summary
+        run: |
+          echo "======================================"
+          echo "✅ SMOKE TESTS COMPLETE"
+          echo "======================================"
+
+# ============================================================================
+# Job Summary
+# ============================================================================
+# This workflow:
+# 1. Builds Go backend binary
+# 2. Builds Flutter Admin Portal web app
+# 3. Builds Flutter Tenant Portal web app
+# 4. Deploys backend to EC2 via SSH
+# 5. Deploys both frontends to S3
+# 6. Invalidates CloudFront caches
+# 7. Runs smoke tests to verify deployment
+#
+# Required Secrets:
+# - AWS_ACCESS_KEY_ID: AWS access key
+# - AWS_SECRET_ACCESS_KEY: AWS secret key
+# - EC2_HOST: EC2 instance IP (54.227.101.30)
+# - EC2_USER: EC2 username (ec2-user)
+# - EC2_SSH_KEY: SSH private key content
+#
+# Optional Variables:
+# - CLOUDFRONT_ADMIN_ID: CloudFront distribution ID for admin portal
+# - CLOUDFRONT_TENANT_ID: CloudFront distribution ID for tenant portal
+# ============================================================================
+

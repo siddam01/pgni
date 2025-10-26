@@ -3,11 +3,12 @@ import 'package:date_range_picker/date_range_picker.dart' as DateRagePicker;
 import '../utils/models.dart';
 import 'package:charts_flutter/flutter.dart' as charty;
 
-import 'package:modal_progress_hud/modal_progress_hud.dart';
+import 'package:modal_progress_hud_nsn/modal_progress_hud_nsn.dart';
 
 import '../utils/config.dart';
 import '../utils/api.dart';
 import '../utils/utils.dart';
+import '../utils/permission_service.dart';
 
 class ReportActivity extends StatefulWidget {
   ReportActivity();
@@ -35,6 +36,30 @@ class ReportActivityState extends State<ReportActivity> {
   @override
   void initState() {
     super.initState();
+    
+    // Check reports permission
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!PermissionService.hasPermission(PermissionService.PERMISSION_VIEW_REPORTS)) {
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => AlertDialog(
+            title: Text('Access Denied'),
+            content: Text('You do not have permission to view reports.\n\nContact your administrator to request access.'),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  Navigator.pop(context); // Go back to previous screen
+                },
+                child: Text('OK'),
+              ),
+            ],
+          ),
+        );
+      }
+    });
+    
     fillData();
   }
 

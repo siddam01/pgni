@@ -1,7 +1,7 @@
 import 'package:cloudpg/screens/hostel.dart';
 import 'package:cloudpg/screens/signup.dart';
 import 'package:flutter/material.dart';
-import 'package:modal_progress_hud/modal_progress_hud.dart';
+import 'package:modal_progress_hud_nsn/modal_progress_hud_nsn.dart';
 
 // import 'package:onesignal_flutter/onesignal_flutter.dart';
 
