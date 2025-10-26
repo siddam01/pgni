@@ -292,8 +292,8 @@ fi
 
 # Run complete database setup (base schema + RBAC)
 echo "Running complete database setup (base schema + RBAC)..."
-if [ -f "pgworld-api-master/setup-database-complete.sql" ]; then
-    mysql -h "$RDS_ENDPOINT" -u "$DB_USER" -p"$DB_PASSWORD" < pgworld-api-master/setup-database-complete.sql
+if [ -f "pgworld-api-master/setup-database-simple.sql" ]; then
+    mysql -h "$RDS_ENDPOINT" -u "$DB_USER" -p"$DB_PASSWORD" < pgworld-api-master/setup-database-simple.sql
     
     if [ $? -eq 0 ]; then
         echo -e "${GREEN}✅ Database setup complete${NC}"
@@ -305,11 +305,11 @@ if [ -f "pgworld-api-master/setup-database-complete.sql" ]; then
         echo ""
     else
         echo -e "${RED}❌ Database setup failed${NC}"
-        echo "Check the SQL file: pgworld-api-master/setup-database-complete.sql"
+        echo "Check the SQL file: pgworld-api-master/setup-database-simple.sql"
         exit 1
     fi
 else
-    echo -e "${RED}❌ Setup file not found: pgworld-api-master/setup-database-complete.sql${NC}"
+    echo -e "${RED}❌ Setup file not found: pgworld-api-master/setup-database-simple.sql${NC}"
     exit 1
 fi
 

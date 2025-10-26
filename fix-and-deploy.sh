@@ -123,7 +123,7 @@ echo ""
 WORK_DIR="$HOME/pgni-deployment"
 cd "$WORK_DIR" || exit 1
 
-if [ ! -f "pgworld-api-master/setup-database-complete.sql" ]; then
+if [ ! -f "pgworld-api-master/setup-database-simple.sql" ]; then
     echo "Downloading latest setup file..."
     
     # Clean and re-clone
@@ -131,7 +131,7 @@ if [ ! -f "pgworld-api-master/setup-database-complete.sql" ]; then
     git clone https://github.com/siddam01/pgni.git temp-repo
     
     if [ -d "temp-repo/pgworld-api-master" ]; then
-        cp temp-repo/pgworld-api-master/setup-database-complete.sql pgworld-api-master/
+        cp temp-repo/pgworld-api-master/setup-database-simple.sql pgworld-api-master/
         echo -e "${GREEN}✅ Latest setup file downloaded${NC}"
     else
         echo -e "${RED}❌ Failed to get setup file${NC}"
@@ -158,7 +158,7 @@ echo "  - Demo data (1 admin, 1 hostel, 4 rooms, 1 tenant)"
 echo ""
 
 # Run the complete setup
-mysql --defaults-file="$MYSQL_CREDS" < pgworld-api-master/setup-database-complete.sql
+mysql --defaults-file="$MYSQL_CREDS" < pgworld-api-master/setup-database-simple.sql
 
 if [ $? -eq 0 ]; then
     echo ""
