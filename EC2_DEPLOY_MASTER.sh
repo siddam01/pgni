@@ -157,24 +157,30 @@ fi
 mkdir -p "$WORK_DIR"
 cd "$WORK_DIR"
 
-echo "Cloning repository..."
-# Replace with your actual repository URL
-if [ -f "pgworld-api-master/main.go" ]; then
-    echo -e "${GREEN}✅ Code already present${NC}"
-else
-    # For now, assume code is already on EC2
-    echo -e "${YELLOW}⚠️  Please ensure code is in current directory${NC}"
-    echo "Expected structure:"
-    echo "  - pgworld-api-master/"
-    echo "  - pgworld-master/"
+echo "Cloning repository from GitHub..."
+git clone https://github.com/siddam01/pgni.git temp-repo
+if [ $? -eq 0 ]; then
+    echo -e "${GREEN}✅ Repository cloned successfully${NC}"
     
-    if [ ! -f "../pgworld-api-master/main.go" ]; then
-        echo -e "${RED}❌ Code not found. Please upload code first.${NC}"
+    # Move the required directories
+    if [ -d "temp-repo/pgworld-api-master" ]; then
+        cp -r temp-repo/pgworld-api-master .
+        echo -e "${GREEN}✅ Backend code copied${NC}"
+    else
+        echo -e "${RED}❌ Backend code not found in repository${NC}"
         exit 1
     fi
     
-    cp -r ../pgworld-api-master .
-    cp -r ../pgworld-master . 2>/dev/null || true
+    if [ -d "temp-repo/pgworld-master" ]; then
+        cp -r temp-repo/pgworld-master .
+        echo -e "${GREEN}✅ Frontend code copied${NC}"
+    fi
+    
+    # Cleanup
+    rm -rf temp-repo
+else
+    echo -e "${RED}❌ Failed to clone repository${NC}"
+    exit 1
 fi
 
 #############################################################
@@ -445,4 +451,5 @@ EOF
 
 echo -e "${GREEN}Deployment info saved to: $HOME/pgni-deployment-info.txt${NC}"
 echo ""
+
 
