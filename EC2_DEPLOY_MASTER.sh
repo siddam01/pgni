@@ -290,20 +290,26 @@ else
     exit 1
 fi
 
-# Run safe migration
-echo "Running database migration (MySQL compatible)..."
-if [ -f "pgworld-api-master/setup-database-safe.sql" ]; then
-    mysql -h "$RDS_ENDPOINT" -u "$DB_USER" -p"$DB_PASSWORD" < pgworld-api-master/setup-database-safe.sql
+# Run complete database setup (base schema + RBAC)
+echo "Running complete database setup (base schema + RBAC)..."
+if [ -f "pgworld-api-master/setup-database-complete.sql" ]; then
+    mysql -h "$RDS_ENDPOINT" -u "$DB_USER" -p"$DB_PASSWORD" < pgworld-api-master/setup-database-complete.sql
     
     if [ $? -eq 0 ]; then
-        echo -e "${GREEN}✅ Database migration complete${NC}"
+        echo -e "${GREEN}✅ Database setup complete${NC}"
+        echo ""
+        echo "Database includes:"
+        echo "  ✅ Base tables (admins, hostels, rooms, users, bills, etc.)"
+        echo "  ✅ RBAC tables (admin_permissions)"
+        echo "  ✅ Demo data (1 admin, 1 hostel, 4 rooms, 1 tenant)"
+        echo ""
     else
-        echo -e "${RED}❌ Database migration failed${NC}"
-        echo "Check the SQL file: pgworld-api-master/setup-database-safe.sql"
+        echo -e "${RED}❌ Database setup failed${NC}"
+        echo "Check the SQL file: pgworld-api-master/setup-database-complete.sql"
         exit 1
     fi
 else
-    echo -e "${RED}❌ Migration file not found: pgworld-api-master/setup-database-safe.sql${NC}"
+    echo -e "${RED}❌ Setup file not found: pgworld-api-master/setup-database-complete.sql${NC}"
     exit 1
 fi
 
