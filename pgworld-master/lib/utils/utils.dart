@@ -22,11 +22,10 @@ List<String> colors = [
 
 final random = new Random();
 
-SharedPreferences prefs;
+late SharedPreferences prefs;
 Future<bool> initSharedPreference() async {
   prefs = await SharedPreferences.getInstance();
   return true;
-  return false;
 }
 
 void launchURL(String url) async {
@@ -89,7 +88,7 @@ Widget popDialog(BuildContext context, String title, bool pop) {
   return AlertDialog(
     title: new Text(title),
     actions: <Widget>[
-      new FlatButton(
+      new TextButton(
         child: new Text("ok"),
         onPressed: () {
           if (pop) {
@@ -173,7 +172,7 @@ String getAmenityName(String id) {
 }
 
 List<Widget> getAmenitiesWidgets(String amenities) {
-  List<Widget> widgets = new List();
+  List<Widget> widgets = [];
   amenities.split(",").forEach((amenity) {
     String name = getAmenityName(amenity);
     if (name.length > 0) {
@@ -205,14 +204,14 @@ Future<bool> twoButtonDialog(
         title: new Text(title),
         content: new Text(content),
         actions: <Widget>[
-          new FlatButton(
+          new TextButton(
             child: new Text("No"),
             onPressed: () {
               Navigator.of(context).pop();
               returned = false;
             },
           ),
-          new FlatButton(
+          new TextButton(
             child: new Text(
               "Yes",
               style: TextStyle(color: Colors.red),
@@ -239,7 +238,7 @@ void oneButtonDialog(
         title: new Text(title),
         content: content != "" ? new Text(content) : null,
         actions: <Widget>[
-          new FlatButton(
+          new TextButton(
             child: new Text("ok"),
             onPressed: () {
               if (dismiss) {
