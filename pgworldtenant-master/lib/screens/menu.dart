@@ -87,13 +87,13 @@ class MenuActivityState extends State<MenuActivity> with SingleTickerProviderSta
   Widget _buildWeeklyMenu() {
     final days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
     final menus = {
-      "Monday": {"breakfast": "Poha", "lunch": "Dal Roti", "dinner": "Rice Curry"},
-      "Tuesday": {"breakfast": "Idli Sambhar", "lunch": "Rajma Rice", "dinner": "Chapati Paneer"},
-      "Wednesday": {"breakfast": "Upma", "lunch": "Chole Rice", "dinner": "Roti Dal"},
-      "Thursday": {"breakfast": "Paratha", "lunch": "Mixed Veg", "dinner": "Rice Sambhar"},
-      "Friday": {"breakfast": "Dosa", "lunch": "Kadhi Rice", "dinner": "Roti Aloo Matar"},
-      "Saturday": {"breakfast": "Sandwich", "lunch": "Pulao Raita", "dinner": "Roti Paneer"},
-      "Sunday": {"breakfast": "Puri Bhaji", "lunch": "Special Thali", "dinner": "Rice Curd"},
+      "Monday": {"breakfast": "Poha, Tea", "lunch": "Dal, Roti, Rice", "dinner": "Paneer Curry, Roti"},
+      "Tuesday": {"breakfast": "Idli, Sambhar", "lunch": "Rajma, Rice", "dinner": "Chapati, Mixed Veg"},
+      "Wednesday": {"breakfast": "Upma, Coffee", "lunch": "Chole, Rice", "dinner": "Roti, Dal Fry"},
+      "Thursday": {"breakfast": "Paratha, Curd", "lunch": "Mixed Veg, Roti", "dinner": "Rice, Sambhar"},
+      "Friday": {"breakfast": "Dosa, Chutney", "lunch": "Kadhi, Rice", "dinner": "Roti, Aloo Matar"},
+      "Saturday": {"breakfast": "Sandwich, Tea", "lunch": "Pulao, Raita", "dinner": "Roti, Paneer"},
+      "Sunday": {"breakfast": "Puri, Bhaji", "lunch": "Special Thali", "dinner": "Rice, Curd"},
     };
 
     return ListView.builder(
@@ -127,19 +127,20 @@ class MenuActivityState extends State<MenuActivity> with SingleTickerProviderSta
     );
   }
 
-  Widget _buildMenuRow(String meal, String items, IconData icon, Color color) {
+  Widget _buildMenuRow(String mealType, String items, IconData icon, Color color) {
     return Padding(
-      padding: EdgeInsets.symmetric(vertical: 6),
+      padding: EdgeInsets.symmetric(vertical: 8),
       child: Row(
         children: [
-          Icon(icon, color: color, size: 20),
+          Icon(icon, color: color, size: 24),
           SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(meal, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-                Text(items, style: TextStyle(color: Colors.grey[700], fontSize: 14)),
+                Text(mealType, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                SizedBox(height: 4),
+                Text(items, style: TextStyle(color: Colors.grey[700], fontSize: 13)),
               ],
             ),
           ),
