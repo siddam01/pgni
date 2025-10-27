@@ -28,7 +28,7 @@ Write-Host "Step 2: Building Admin Portal (pgworld-master)..." -ForegroundColor 
 Set-Location pgworld-master
 flutter clean
 flutter pub get
-flutter build web --release --web-renderer html
+flutter build web --release
 if ($LASTEXITCODE -ne 0) {
     Write-Host "ERROR: Admin portal build failed!" -ForegroundColor Red
     Set-Location ..
@@ -42,7 +42,7 @@ Write-Host "Step 3: Building Tenant Portal (pgworldtenant-master)..." -Foregroun
 Set-Location pgworldtenant-master
 flutter clean
 flutter pub get
-flutter build web --release --web-renderer html
+flutter build web --release
 if ($LASTEXITCODE -ne 0) {
     Write-Host "ERROR: Tenant portal build failed!" -ForegroundColor Red
     Set-Location ..

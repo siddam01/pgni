@@ -29,7 +29,7 @@ echo "Step 2: Building Admin Portal (pgworld-master)..."
 cd pgworld-master
 flutter clean
 flutter pub get
-flutter build web --release --web-renderer html
+flutter build web --release
 if [ $? -ne 0 ]; then
     echo "ERROR: Admin portal build failed!"
     cd ..
@@ -43,7 +43,7 @@ echo "Step 3: Building Tenant Portal (pgworldtenant-master)..."
 cd pgworldtenant-master
 flutter clean
 flutter pub get
-flutter build web --release --web-renderer html
+flutter build web --release
 if [ $? -ne 0 ]; then
     echo "ERROR: Tenant portal build failed!"
     cd ..
