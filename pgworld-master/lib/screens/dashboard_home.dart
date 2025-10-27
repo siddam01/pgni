@@ -20,10 +20,6 @@ class _DashboardHomeState extends State<DashboardHome> {
               style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
             SizedBox(height: 10),
-            Text(
-              'Coming Soon',
-              style: TextStyle(fontSize: 16, color: Colors.grey),
-            ),
             SizedBox(height: 30),
             Card(
               margin: EdgeInsets.all(20),
