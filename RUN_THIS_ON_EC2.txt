@@ -1,0 +1,40 @@
+========================================
+CloudPG - AUTOMATED DEPLOYMENT
+========================================
+
+Run these 2 commands on EC2:
+(No manual configuration needed!)
+
+========================================
+COMMAND 1: Download
+========================================
+
+curl -sL https://github.com/siddam01/pgni/archive/refs/heads/main.zip -o pgni.zip && unzip -q pgni.zip && cd pgni-main
+
+========================================
+COMMAND 2: Deploy
+========================================
+
+chmod +x DEPLOY_AUTO_COMPLETE.sh && ./DEPLOY_AUTO_COMPLETE.sh
+
+========================================
+
+You will be asked:
+1. Database password (ONCE)
+2. Confirm deployment (Y/n)
+
+That's it!
+
+Everything else is configured automatically from config.production.env file.
+
+========================================
+After Deployment
+========================================
+
+Visit: http://54.227.101.30/admin/
+API: http://54.227.101.30:8080/health
+
+Clear browser cache if you see placeholders!
+
+========================================
+
