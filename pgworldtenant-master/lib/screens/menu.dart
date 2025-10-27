@@ -85,8 +85,67 @@ class MenuActivityState extends State<MenuActivity> with SingleTickerProviderSta
   }
 
   Widget _buildWeeklyMenu() {
-    return Center(
-      child: Text("Weekly menu view - Coming soon"),
+    final days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+    final menus = {
+      "Monday": {"breakfast": "Poha, Tea", "lunch": "Dal, Roti, Rice", "dinner": "Paneer Curry, Roti"},
+      "Tuesday": {"breakfast": "Idli, Sambhar", "lunch": "Rajma, Rice", "dinner": "Chapati, Mixed Veg"},
+      "Wednesday": {"breakfast": "Upma, Coffee", "lunch": "Chole, Rice", "dinner": "Roti, Dal Fry"},
+      "Thursday": {"breakfast": "Paratha, Curd", "lunch": "Mixed Veg, Roti", "dinner": "Rice, Sambhar"},
+      "Friday": {"breakfast": "Dosa, Chutney", "lunch": "Kadhi, Rice", "dinner": "Roti, Aloo Matar"},
+      "Saturday": {"breakfast": "Sandwich, Tea", "lunch": "Pulao, Raita", "dinner": "Roti, Paneer"},
+      "Sunday": {"breakfast": "Puri, Bhaji", "lunch": "Special Thali", "dinner": "Rice, Curd"},
+    };
+
+    return ListView.builder(
+      padding: EdgeInsets.all(16),
+      itemCount: days.length,
+      itemBuilder: (context, index) {
+        final day = days[index];
+        final dayMenu = menus[day]!;
+        return Card(
+          elevation: 2,
+          margin: EdgeInsets.only(bottom: 12),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          child: ExpansionTile(
+            leading: Icon(Icons.calendar_today, color: Colors.blue),
+            title: Text(day, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            children: [
+              Padding(
+                padding: EdgeInsets.all(12),
+                child: Column(
+                  children: [
+                    _buildMenuRow("Breakfast", dayMenu["breakfast"]!, Icons.free_breakfast, Colors.orange),
+                    _buildMenuRow("Lunch", dayMenu["lunch"]!, Icons.lunch_dining, Colors.green),
+                    _buildMenuRow("Dinner", dayMenu["dinner"]!, Icons.dinner_dining, Colors.blue),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildMenuRow(String mealType, String items, IconData icon, Color color) {
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        children: [
+          Icon(icon, color: color, size: 24),
+          SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(mealType, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                SizedBox(height: 4),
+                Text(items, style: TextStyle(color: Colors.grey[700], fontSize: 13)),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
