@@ -1,0 +1,98 @@
+name: Deploy to EC2 Pre-Prod
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:  # Allow manual triggering
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '2.10.5'  # Use Flutter 2.x for compatibility
+          channel: 'stable'
+      
+      - name: Build Admin Portal
+        run: |
+          cd pgworld-master
+          flutter clean
+          flutter pub get
+          flutter build web --release --no-source-maps
+          
+      - name: Build Tenant Portal
+        run: |
+          cd pgworldtenant-master
+          flutter clean
+          flutter pub get
+          flutter build web --release --no-source-maps
+          
+      - name: Package build files
+        run: |
+          mkdir -p deploy-package
+          cp -r pgworld-master/build/web deploy-package/admin
+          cp -r pgworldtenant-master/build/web deploy-package/tenant
+          tar -czf deploy-package.tar.gz deploy-package/
+          
+      - name: Deploy to EC2
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_USER: ${{ secrets.EC2_USER }}
+          EC2_KEY: ${{ secrets.EC2_SSH_KEY }}
+        run: |
+          # Setup SSH
+          mkdir -p ~/.ssh
+          echo "$EC2_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H $EC2_HOST >> ~/.ssh/known_hosts
+          
+          # Upload package
+          scp -i ~/.ssh/deploy_key deploy-package.tar.gz $EC2_USER@$EC2_HOST:/tmp/
+          
+          # Deploy on EC2
+          ssh -i ~/.ssh/deploy_key $EC2_USER@$EC2_HOST << 'ENDSSH'
+            # Extract package
+            cd /tmp
+            tar -xzf deploy-package.tar.gz
+            
+            # Backup current deployment
+            BACKUP_DIR="/var/www/backups/$(date +%Y%m%d_%H%M%S)"
+            sudo mkdir -p $BACKUP_DIR
+            sudo cp -r /var/www/admin $BACKUP_DIR/admin 2>/dev/null || true
+            sudo cp -r /var/www/tenant $BACKUP_DIR/tenant 2>/dev/null || true
+            
+            # Deploy new version
+            sudo rm -rf /var/www/admin /var/www/tenant
+            sudo mkdir -p /var/www/admin /var/www/tenant
+            sudo cp -r /tmp/deploy-package/admin/* /var/www/admin/
+            sudo cp -r /tmp/deploy-package/tenant/* /var/www/tenant/
+            sudo chown -R nginx:nginx /var/www/admin /var/www/tenant 2>/dev/null || \
+                sudo chown -R www-data:www-data /var/www/admin /var/www/tenant
+            sudo chmod -R 755 /var/www/admin /var/www/tenant
+            
+            # Restart nginx
+            sudo systemctl restart nginx || sudo service nginx restart
+            
+            # Cleanup
+            rm -rf /tmp/deploy-package* /tmp/deploy-package.tar.gz
+            
+            echo "Deployment complete!"
+          ENDSSH
+          
+      - name: Notify Deployment Status
+        if: always()
+        run: |
+          if [ $? -eq 0 ]; then
+            echo "✅ Deployment successful!"
+          else
+            echo "❌ Deployment failed!"
+            exit 1
+          fi
+
